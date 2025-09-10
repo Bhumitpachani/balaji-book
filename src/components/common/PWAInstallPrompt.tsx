@@ -14,7 +14,7 @@ export const PWAInstallPrompt: React.FC = () => {
       <Card className="p-4 bg-card border shadow-lg">
         <div className="flex items-center gap-3">
             <img 
-            src="/lovable-uploads/b14f8f0f-eb17-4db5-beee-cbd14ede7fc8.png" 
+            src="https://5.imimg.com/data5/YD/VE/MY-27589869/balaji-engineering-works-90x90.jpg" 
             alt="App Icon" 
             className="w-12 h-12 rounded-lg flex-shrink-0"
           />
