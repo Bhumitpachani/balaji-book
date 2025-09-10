@@ -257,91 +257,89 @@ export const OrdersList: React.FC = () => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 pt-2">
-                      {/* Status Update Button */}
-                      {(() => {
-                        if (order.type === 'Inquiry' && order.status === 'Pending') {
-                          return (
+                    <div className="space-y-3 pt-3 border-t border-border">
+                      {/* Progress Actions Row */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Status Update Button */}
+                        {(() => {
+                          if (order.type === 'Inquiry' && order.status === 'Pending') {
+                            return (
+                              <Button
+                                size="sm"
+                                onClick={() => handleStatusButtonClick(order)}
+                                className="flex-1 min-w-[120px] bg-primary hover:bg-primary-hover text-primary-foreground"
+                              >
+                                Confirm Order
+                              </Button>
+                            );
+                          }
+                          
+                          const nextStatus = getNextStatus(order.status, order.type);
+                          return nextStatus && (
                             <Button
                               size="sm"
-                              variant="outline"
-                              onClick={() => handleStatusButtonClick(order)}
-                              className="text-xs"
+                              onClick={() => handleStatusUpdate(order._id, nextStatus)}
+                              className="flex-1 min-w-[120px] bg-primary hover:bg-primary-hover text-primary-foreground"
                             >
-                              Confirm Order
+                              Mark as {nextStatus}
                             </Button>
                           );
-                        }
-                        
-                        const nextStatus = getNextStatus(order.status, order.type);
-                        return nextStatus && (
+                        })()}
+
+                        {/* Payment Update for Admin */}
+                        {user?.role === 'admin' && order.paymentStatus === 'Unpaid' && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleStatusUpdate(order._id, nextStatus)}
-                            className="text-xs"
+                            onClick={() => handlePaymentUpdate(order._id, 'Paid')}
+                            className="flex-1 min-w-[100px] border-success text-success hover:bg-success hover:text-success-foreground"
                           >
-                            Mark as {nextStatus}
+                            Mark Paid
                           </Button>
-                        );
-                      })()}
+                        )}
+                      </div>
 
-                      {/* View button for users and admins */}
-                      <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
-                        <Link to={`/orders/${order._id}`}>
-                          <Eye className="w-4 h-4" />
-                        </Link>
-                      </Button>
+                      {/* Action Buttons Row */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex gap-2">
+                          {/* View Button */}
+                          <Button asChild size="sm" variant="outline" className="px-3">
+                            <Link to={`/orders/${order._id}`}>
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Link>
+                          </Button>
 
-                      {/* Admin Actions */}
-                      {user?.role === 'admin' && (
-                        <>
-                          {order.paymentStatus === 'Unpaid' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handlePaymentUpdate(order._id, 'Paid')}
-                              className="text-xs"
-                            >
-                              Mark Paid
+                          {/* File Link */}
+                          {order.url && (
+                            <Button asChild size="sm" variant="outline" className="px-3">
+                              <a href={order.url} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="w-4 h-4 mr-1" />
+                                File
+                              </a>
                             </Button>
                           )}
-                          
-                          <div className="flex gap-1 ml-auto">
+                        </div>
+
+                        {/* Admin Only Actions */}
+                        {user?.role === 'admin' && (
+                          <div className="flex gap-1">
                             <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
-                              <Link to={`/orders/${order._id}`}>
-                                <Eye className="w-4 h-4" />
+                              <Link to={`/orders/${order._id}/edit`}>
+                                <Edit className="w-4 h-4" />
                               </Link>
                             </Button>
-                            {user?.role === 'admin' && (
-                              <>
-                                <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
-                                  <Link to={`/orders/${order._id}/edit`}>
-                                    <Edit className="w-4 h-4" />
-                                  </Link>
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleDelete(order._id)}
-                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDelete(order._id)}
+                              className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
-                        </>
-                      )}
-
-                      {/* File Link */}
-                      {order.url && (
-                        <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0 ml-auto">
-                          <a href={order.url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </Button>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>
