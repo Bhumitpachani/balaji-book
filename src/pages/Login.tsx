@@ -42,7 +42,12 @@ export const Login: React.FC = () => {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
           <div className="w-16 h-16 bg-app-gradient rounded-2xl mx-auto flex items-center justify-center mb-4">
-            <span className="text-white font-bold text-2xl">B</span>
+{/*             <span className="text-white font-bold text-2xl">B</span> */}
+            <img 
+            src="https://5.imimg.com/data5/YD/VE/MY-27589869/balaji-engineering-works-90x90.jpg" 
+            alt="App Icon" 
+            className="w-12 h-12 rounded-lg flex-shrink-0"
+          />
           </div>
           <h1 className="text-3xl font-bold text-foreground">BalajiBook</h1>
           <p className="text-muted-foreground">Sign in to your account</p>
