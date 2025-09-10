@@ -12,6 +12,7 @@ import { OrdersList } from "./pages/OrdersList";
 import { CreateOrder } from "./pages/CreateOrder";
 import { CalendarView } from "./pages/CalendarView";
 import { Analytics } from "./pages/Analytics";
+import { OrderDetail } from "./pages/OrderDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -88,6 +89,15 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <CreateOrder />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/orders/:id"
+        element={
+          <ProtectedRoute>
+            <OrderDetail />
           </ProtectedRoute>
         }
       />

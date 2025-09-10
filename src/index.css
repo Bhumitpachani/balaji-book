@@ -134,14 +134,41 @@ All colors MUST be HSL.
     min-height: 100dvh;
   }
 
+  /* Enhanced mobile card design */
+  .shadow-card {
+    box-shadow: 0 2px 8px -2px hsl(var(--primary) / 0.1), 
+                0 4px 16px -4px hsl(var(--primary) / 0.06);
+    border: 1px solid hsl(var(--border));
+    transition: all 0.2s ease-in-out;
+  }
+
+  .shadow-card:hover {
+    box-shadow: 0 4px 16px -2px hsl(var(--primary) / 0.15), 
+                0 8px 24px -4px hsl(var(--primary) / 0.08);
+    transform: translateY(-1px);
+  }
+
   /* PWA install prompt */
   .install-prompt {
     position: fixed;
-    bottom: 1rem;
-    left: 1rem;
-    right: 1rem;
+    top: 16px;
+    left: 16px;
+    right: 16px;
     z-index: 50;
-    animation: slideUp 0.3s ease-out;
+    max-width: 400px;
+    margin: 0 auto;
+    animation: slideDown 0.3s ease-out;
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translateY(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
   @keyframes slideUp {

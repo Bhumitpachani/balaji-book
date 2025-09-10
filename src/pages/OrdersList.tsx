@@ -108,12 +108,43 @@ export const OrdersList: React.FC = () => {
 
   const getNextStatus = (currentStatus: string, orderType: string) => {
     if (orderType === 'Inquiry') {
-      return currentStatus === 'Pending' ? 'Done' : null;
+      return currentStatus === 'Pending' ? 'Confirm Order' : null;
     }
     
     if (currentStatus === 'Pending') return 'Running';
     if (currentStatus === 'Running') return 'Done';
     return null;
+  };
+
+  const handleOrderTypeUpdate = async (orderId: string, newType: string) => {
+    try {
+      await apiService.updateOrder(orderId, { type: newType });
+      setOrders(orders.map(order => 
+        order._id === orderId ? { ...order, type: newType as any } : order
+      ));
+      toast({
+        title: "Success",
+        description: "Order type updated successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update order type",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleStatusButtonClick = (order: Order) => {
+    if (order.type === 'Inquiry' && order.status === 'Pending') {
+      // Convert inquiry to confirm order
+      handleOrderTypeUpdate(order._id, 'Confirm');
+    } else {
+      const nextStatus = getNextStatus(order.status, order.type);
+      if (nextStatus) {
+        handleStatusUpdate(order._id, nextStatus);
+      }
+    }
   };
 
   if (isLoading) {
@@ -229,6 +260,19 @@ export const OrdersList: React.FC = () => {
                     <div className="flex items-center gap-2 pt-2">
                       {/* Status Update Button */}
                       {(() => {
+                        if (order.type === 'Inquiry' && order.status === 'Pending') {
+                          return (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleStatusButtonClick(order)}
+                              className="text-xs"
+                            >
+                              Confirm Order
+                            </Button>
+                          );
+                        }
+                        
                         const nextStatus = getNextStatus(order.status, order.type);
                         return nextStatus && (
                           <Button
@@ -241,6 +285,13 @@ export const OrdersList: React.FC = () => {
                           </Button>
                         );
                       })()}
+
+                      {/* View button for users and admins */}
+                      <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
+                        <Link to={`/orders/${order._id}`}>
+                          <Eye className="w-4 h-4" />
+                        </Link>
+                      </Button>
 
                       {/* Admin Actions */}
                       {user?.role === 'admin' && (
@@ -262,19 +313,23 @@ export const OrdersList: React.FC = () => {
                                 <Eye className="w-4 h-4" />
                               </Link>
                             </Button>
-                            <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
-                              <Link to={`/orders/${order._id}/edit`}>
-                                <Edit className="w-4 h-4" />
-                              </Link>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDelete(order._id)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            {user?.role === 'admin' && (
+                              <>
+                                <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
+                                  <Link to={`/orders/${order._id}/edit`}>
+                                    <Edit className="w-4 h-4" />
+                                  </Link>
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDelete(order._id)}
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </>
                       )}

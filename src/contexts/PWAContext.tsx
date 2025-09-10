@@ -38,17 +38,27 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const isInstalled = localStorage.getItem('balajibook_installed') === 'true';
     setIsInstalled(isStandalone || isInstalled);
 
+    // Show install prompt on every visit if not installed
+    const shouldShowPrompt = !isStandalone && !isInstalled;
+    
     // Listen for the beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       const installEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(installEvent);
       
-      // Only show install prompt if not already installed
-      if (!isStandalone && !isInstalled) {
+      // Show install prompt if not already installed
+      if (shouldShowPrompt) {
         setIsInstallable(true);
       }
     };
+
+    // If no beforeinstallprompt event (e.g., already dismissed), still show custom prompt
+    setTimeout(() => {
+      if (shouldShowPrompt && !deferredPrompt) {
+        setIsInstallable(true);
+      }
+    }, 2000); // Show after 2 seconds
 
     // Listen for successful app installation
     const handleAppInstalled = () => {
