@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Filter, Eye, Edit, Trash2, ExternalLink } from "lucide-react";
+import { Plus, Search, Filter, Eye, Edit, Trash2, ExternalLink, DollarSign, User } from "lucide-react";
 import { Link } from "react-router-dom";
-import { apiService, Order } from "@/lib/api";
+import { apiService, Order, Client } from "@/lib/api";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { PaymentModal } from "@/components/common/PaymentModal";
 import { MobileNavigation } from "@/components/common/MobileNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +21,9 @@ export const OrdersList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isPaymentLoading, setIsPaymentLoading] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -95,6 +99,37 @@ export const OrdersList: React.FC = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handlePaymentCollection = async (newReceivedAmount: number) => {
+    if (!selectedOrder) return;
+    
+    setIsPaymentLoading(true);
+    try {
+      const updatedOrder = await apiService.collectPayment(selectedOrder._id, newReceivedAmount);
+      setOrders(orders.map(order => 
+        order._id === selectedOrder._id ? { ...order, ...updatedOrder } : order
+      ));
+      toast({
+        title: "Success",
+        description: "Payment collected successfully",
+      });
+      setIsPaymentModalOpen(false);
+      setSelectedOrder(null);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to collect payment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPaymentLoading(false);
+    }
+  };
+
+  const openPaymentModal = (order: Order) => {
+    setSelectedOrder(order);
+    setIsPaymentModalOpen(true);
   };
 
   const filteredOrders = orders.filter(order => {
@@ -242,14 +277,43 @@ export const OrdersList: React.FC = () => {
 
                     {/* Details */}
                     <div className="space-y-2 text-sm">
+                      {/* Client Info */}
+                      {typeof order.clientId === 'object' && order.clientId && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Client:</span>
+                          <span className="text-foreground font-medium">{order.clientId.name}</span>
+                        </div>
+                      )}
+                      
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Work:</span>
-                        <span className="text-foreground font-medium">{order.work}</span>
+                        <span className="text-foreground font-medium truncate ml-2">{order.work}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Delivery:</span>
                         <span className="text-foreground">{new Date(order.deliveryDate).toLocaleDateString()}</span>
                       </div>
+                      
+                      {/* Payment Info */}
+                      {order.totalAmount > 0 && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Amount:</span>
+                            <span className="text-foreground font-medium">₹{order.totalAmount.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Received:</span>
+                            <span className="text-success font-medium">₹{order.receivedPayment.toLocaleString()}</span>
+                          </div>
+                          {order.receivedPayment < order.totalAmount && (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Pending:</span>
+                              <span className="text-destructive font-medium">₹{(order.totalAmount - order.receivedPayment).toLocaleString()}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Payment:</span>
                         <StatusBadge status={order.paymentStatus} type="payment" />
@@ -286,15 +350,16 @@ export const OrdersList: React.FC = () => {
                           );
                         })()}
 
-                        {/* Payment Update for Admin */}
-                        {user?.role === 'admin' && order.paymentStatus === 'Unpaid' && (
+                        {/* Payment Collection for Admin */}
+                        {user?.role === 'admin' && order.totalAmount && order.receivedPayment < order.totalAmount && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handlePaymentUpdate(order._id, 'Paid')}
-                            className="flex-1 min-w-[100px] border-success text-success hover:bg-success hover:text-success-foreground"
+                            onClick={() => openPaymentModal(order)}
+                            className="flex-1 min-w-[120px] border-primary text-primary hover:bg-primary hover:text-primary-foreground"
                           >
-                            Mark Paid
+                            <DollarSign className="w-4 h-4 mr-1" />
+                            Collect Payment
                           </Button>
                         )}
                       </div>
@@ -350,6 +415,20 @@ export const OrdersList: React.FC = () => {
       </div>
 
       <MobileNavigation />
+      
+      {/* Payment Modal */}
+      {selectedOrder && (
+        <PaymentModal
+          order={selectedOrder}
+          isOpen={isPaymentModalOpen}
+          onClose={() => {
+            setIsPaymentModalOpen(false);
+            setSelectedOrder(null);
+          }}
+          onPaymentCollected={handlePaymentCollection}
+          isLoading={isPaymentLoading}
+        />
+      )}
     </div>
   );
 };

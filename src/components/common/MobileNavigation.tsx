@@ -1,4 +1,4 @@
-import { Home, FileText, Calendar, BarChart3 } from "lucide-react";
+import { Home, FileText, Calendar, BarChart3, User } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,6 +12,7 @@ export const MobileNavigation: React.FC = () => {
     ? [
         { to: "/admin", icon: Home, label: "Dashboard" },
         { to: "/orders", icon: FileText, label: "Orders" },
+        { to: "/clients", icon: User, label: "Clients" },
         { to: "/analytics", icon: BarChart3, label: "Analytics" },
       ]
     : [

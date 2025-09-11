@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, X } from "lucide-react";
-import { apiService } from "@/lib/api";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Upload, X, Search, User, Loader2 } from "lucide-react";
+import { apiService, Client } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 export const CreateOrder: React.FC = () => {
@@ -15,6 +16,10 @@ export const CreateOrder: React.FC = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [clientSearch, setClientSearch] = useState('');
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
   
   const [formData, setFormData] = useState({
     orderName: '',
@@ -25,9 +30,28 @@ export const CreateOrder: React.FC = () => {
     deliveryDate: '',
     type: 'Inquiry',
     paymentStatus: 'Unpaid',
+    totalAmount: 0,
+    receivedPayment: 0,
   });
 
-  const handleInputChange = (field: string, value: string) => {
+  useEffect(() => {
+    loadClients();
+  }, []);
+
+  const loadClients = async () => {
+    try {
+      const data = await apiService.getAllClients();
+      setClients(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load clients",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -42,13 +66,35 @@ export const CreateOrder: React.FC = () => {
     setSelectedFile(null);
   };
 
+  const filteredClients = clients.filter(client => 
+    client.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+    client.mobileNumber.includes(clientSearch)
+  );
+
+  const selectClient = (client: Client) => {
+    setSelectedClient(client);
+    setClientSearch(client.name);
+    setShowClientDropdown(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!selectedClient) {
+      toast({
+        title: "Error",
+        description: "Please select a client",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const orderData = {
         ...formData,
+        clientId: selectedClient._id,
         ...(selectedFile && { file: selectedFile })
       };
 
@@ -90,6 +136,63 @@ export const CreateOrder: React.FC = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Client Selection */}
+              <div className="space-y-2">
+                <Label>Select Client *</Label>
+                <div className="relative">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      value={clientSearch}
+                      onChange={(e) => {
+                        setClientSearch(e.target.value);
+                        setShowClientDropdown(true);
+                        if (!e.target.value) setSelectedClient(null);
+                      }}
+                      onFocus={() => setShowClientDropdown(true)}
+                      placeholder="Search client by name or mobile..."
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                  
+                  {showClientDropdown && filteredClients.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {filteredClients.map((client) => (
+                        <div
+                          key={client._id}
+                          onClick={() => selectClient(client)}
+                          className="px-3 py-2 hover:bg-muted cursor-pointer border-b border-border last:border-b-0"
+                        >
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium">{client.name}</p>
+                              <p className="text-sm text-muted-foreground">{client.mobileNumber}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                {selectedClient && (
+                  <div className="mt-2 p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium">{selectedClient.name}</p>
+                          <p className="text-sm text-muted-foreground">{selectedClient.mobileNumber}</p>
+                        </div>
+                      </div>
+                      <Badge variant="outline">Selected</Badge>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Order Name */}
               <div className="space-y-2">
                 <Label htmlFor="orderName">Order Name *</Label>
@@ -125,6 +228,36 @@ export const CreateOrder: React.FC = () => {
                   rows={3}
                   required
                 />
+              </div>
+
+              {/* Payment Fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="totalAmount">Total Amount *</Label>
+                  <Input
+                    id="totalAmount"
+                    type="number"
+                    value={formData.totalAmount}
+                    onChange={(e) => handleInputChange('totalAmount', parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="receivedPayment">Received Payment</Label>
+                  <Input
+                    id="receivedPayment"
+                    type="number"
+                    value={formData.receivedPayment}
+                    onChange={(e) => handleInputChange('receivedPayment', parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    min="0"
+                    max={formData.totalAmount}
+                    step="0.01"
+                  />
+                </div>
               </div>
 
               {/* Type */}
@@ -196,7 +329,7 @@ export const CreateOrder: React.FC = () => {
               {/* File Upload */}
               <div className="space-y-2">
                 <Label>File Upload</Label>
-                <div className="border-2 border-dashed border-border rounded-lg p-4">
+                <div className="border-2 border-dashed border-border rounded-lg p-4 relative">
                   {!selectedFile ? (
                     <div className="text-center">
                       <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
@@ -246,7 +379,14 @@ export const CreateOrder: React.FC = () => {
                 className="w-full bg-primary hover:bg-primary-hover text-primary-foreground"
                 disabled={isLoading}
               >
-                {isLoading ? 'Creating Order...' : 'Create Order'}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Order...
+                  </>
+                ) : (
+                  'Create Order'
+                )}
               </Button>
             </form>
           </CardContent>

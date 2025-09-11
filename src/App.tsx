@@ -13,6 +13,9 @@ import { CreateOrder } from "./pages/CreateOrder";
 import { CalendarView } from "./pages/CalendarView";
 import { Analytics } from "./pages/Analytics";
 import { OrderDetail } from "./pages/OrderDetail";
+import { ClientManagement } from "./pages/ClientManagement";
+import { CreateClient } from "./pages/CreateClient";
+import { ClientOrders } from "./pages/ClientOrders";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -116,6 +119,33 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <Analytics />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/clients"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <ClientManagement />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/clients/new"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <CreateClient />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/clients/:id/orders"
+        element={
+          <ProtectedRoute>
+            <ClientOrders />
           </ProtectedRoute>
         }
       />
