@@ -136,7 +136,7 @@ export const OrdersList: React.FC = () => {
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.orderName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.number.toLowerCase().includes(searchTerm.toLowerCase());
+                         (order.number ? order.number.toLowerCase().includes(searchTerm.toLowerCase()) : false);
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     const matchesType = typeFilter === 'all' || order.type === typeFilter;
     
@@ -325,29 +325,58 @@ export const OrdersList: React.FC = () => {
                     {/* Details */}
                      <div className="space-y-2 text-sm">
                        {/* Client Info */}
-                       {typeof order.clientId === 'object' && order.clientId ? (
-                         <>
-                           <div className="flex justify-between">
-                             <span className="text-muted-foreground">Client:</span>
-                             <span className="text-foreground font-medium">{order.clientId.name}</span>
-                           </div>
-                           <div className="flex justify-between">
-                             <span className="text-muted-foreground">Phone:</span>
-                             <span className="text-foreground">{order.clientId.mobileNumber}</span>
-                           </div>
-                           {order.clientId.address && (
-                             <div className="flex justify-between">
-                               <span className="text-muted-foreground">Address:</span>
-                               <span className="text-foreground text-right ml-2">{order.clientId.address}, {order.clientId.city}</span>
-                             </div>
-                           )}
-                         </>
-                       ) : (
-                         <div className="flex justify-between">
-                           <span className="text-muted-foreground">Client ID:</span>
-                           <span className="text-foreground font-medium">{typeof order.clientId === 'string' ? order.clientId : order.clientId._id}</span>
-                         </div>
-                       )}
+                        {(() => {
+                          const c: any = (order as any).clientId;
+                          const hasObj = c && typeof c === 'object';
+                          const hasFlat = (order as any).clientName;
+                          if (hasObj) {
+                            return (
+                              <>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Client:</span>
+                                  <span className="text-foreground font-medium">{c.name}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Phone:</span>
+                                  <span className="text-foreground">{c.mobileNumber}</span>
+                                </div>
+                                {c.address && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Address:</span>
+                                    <span className="text-foreground text-right ml-2">{c.address}{c.city ? `, ${c.city}` : ''}</span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          }
+                          if (hasFlat) {
+                            return (
+                              <>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Client:</span>
+                                  <span className="text-foreground font-medium">{(order as any).clientName}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">Phone:</span>
+                                  <span className="text-foreground">{(order as any).clientMobileNumber}</span>
+                                </div>
+                                {(order as any).clientAddress && (
+                                  <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Address:</span>
+                                    <span className="text-foreground text-right ml-2">{(order as any).clientAddress}{(order as any).clientCity ? `, ${(order as any).clientCity}` : ''}</span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          }
+                          const idText = typeof (order as any).clientId === 'string' ? (order as any).clientId : (c && c._id ? c._id : '—');
+                          return (
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Client:</span>
+                              <span className="text-foreground">{idText}</span>
+                            </div>
+                          );
+                        })()}
                       
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Work:</span>

@@ -49,7 +49,7 @@ export const ClientOrders: React.FC = () => {
   useEffect(() => {
     const filtered = orders.filter(order => {
       const matchesSearch = order.orderName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           order.number.toLowerCase().includes(searchTerm.toLowerCase());
+                           (order.number ? order.number.toLowerCase().includes(searchTerm.toLowerCase()) : false);
       const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
       const matchesType = typeFilter === 'all' || order.type === typeFilter;
       
