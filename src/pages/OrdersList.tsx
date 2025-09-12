@@ -156,7 +156,9 @@ export const OrdersList: React.FC = () => {
     }
     
     const matchesSearch = (order.orderName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (order.number || '').toLowerCase().includes(searchTerm.toLowerCase());
+                         (order.number || '').toLowerCase().includes(searchTerm.toLowerCase()); ||
+                         (order.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()); ||
+                         (order.clientMobileNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     const matchesType = typeFilter === 'all' || order.type === typeFilter;
     
