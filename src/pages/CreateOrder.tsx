@@ -222,7 +222,7 @@ export const CreateOrder: React.FC = () => {
               </div>
 
               {/* Order Number */}
-              <div className="space-y-2">
+{/*               <div className="space-y-2">
                 <Label htmlFor="number">Order Number</Label>
                 <Input
                   id="number"
@@ -232,7 +232,7 @@ export const CreateOrder: React.FC = () => {
                   placeholder="Auto-generated"
                 />
                 <p className="text-xs text-muted-foreground">Order number will be auto-generated</p>
-              </div>
+              </div> */}
 
               {/* Work Description */}
               <div className="space-y-2">
