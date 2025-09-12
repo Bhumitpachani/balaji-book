@@ -41,11 +41,12 @@ export const CreateOrder: React.FC = () => {
 
   const loadNextOrderNumber = async () => {
     try {
-      const data = await apiService.getNextOrderNumber();
-      setOrderNumber(data.nextNumber.toString());
+      const ms = Date.now()
+      setOrderNumber(ms);
     } catch (error) {
+      const ms = Date.now()
       console.error('Failed to load next order number:', error);
-      setOrderNumber('1'); // Fallback to 1 if API fails
+      setOrderNumber(ms); // Fallback to 1 if API fails
     }
   };
 
