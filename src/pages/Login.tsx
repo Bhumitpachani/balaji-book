@@ -41,7 +41,7 @@ export const Login: React.FC = () => {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-16 h-16 bg-app-gradient rounded-2xl mx-auto flex items-center justify-center mb-4">
+          <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-4">
 {/*             <span className="text-white font-bold text-2xl">B</span> */}
             <img 
             src="https://5.imimg.com/data5/YD/VE/MY-27589869/balaji-engineering-works-90x90.jpg" 
