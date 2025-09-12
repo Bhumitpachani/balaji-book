@@ -282,7 +282,7 @@ export const OrdersList: React.FC = () => {
         </Card>
 
         {/* Orders List */}
-        <div className="space-y-3">
+        <div className="space-y-3" style={{marginBottom="80px"}}>
           {filteredOrders.length === 0 ? (
             <Card className="shadow-card">
               <CardContent className="p-8 text-center">
