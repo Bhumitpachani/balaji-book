@@ -34,17 +34,9 @@ export const OrdersList: React.FC = () => {
   const loadOrders = async () => {
     try {
       const data = await apiService.getAllOrders();
-      console.log('Raw orders data:', data);
-      console.log('Orders array check:', Array.isArray(data));
-      if (Array.isArray(data)) {
-        data.forEach((order, index) => {
-          console.log(`Order ${index}:`, order);
-          if (!order || !order._id) {
-            console.error(`Order at index ${index} is missing _id:`, order);
-          }
-        });
-      }
-      setOrders(data);
+      // Filter out any invalid orders
+      const validOrders = data.filter(order => order && order._id);
+      setOrders(validOrders);
     } catch (error) {
       toast({
         title: "Error",
@@ -56,47 +48,11 @@ export const OrdersList: React.FC = () => {
     }
   };
 
-  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
-    try {
-      await apiService.updateOrder(orderId, { status: newStatus });
-      setOrders(orders.map(order => 
-        order._id === orderId ? { ...order, status: newStatus as any } : order
-      ));
-      toast({
-        title: "Success",
-        description: "Order status updated successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update order status",
-        variant: "destructive",
-      });
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!window.confirm('Are you sure you want to delete this order?')) {
+      return;
     }
-  };
 
-  const handlePaymentUpdate = async (orderId: string, newPaymentStatus: string) => {
-    try {
-      await apiService.updateOrder(orderId, { paymentStatus: newPaymentStatus });
-      setOrders(orders.map(order => 
-        order._id === orderId ? { ...order, paymentStatus: newPaymentStatus as any } : order
-      ));
-      toast({
-        title: "Success",
-        description: "Payment status updated successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update payment status",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDelete = async (orderId: string) => {
-    if (!confirm('Are you sure you want to delete this order?')) return;
-    
     try {
       await apiService.deleteOrder(orderId);
       setOrders(orders.filter(order => order._id !== orderId));
@@ -104,34 +60,88 @@ export const OrdersList: React.FC = () => {
         title: "Success",
         description: "Order deleted successfully",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to delete order",
+        description: error?.message || "Failed to delete order",
         variant: "destructive",
       });
     }
   };
 
-  const handlePaymentCollection = async (newReceivedAmount: number) => {
-    if (!selectedOrder) return;
-    
-    setIsPaymentLoading(true);
+  const handleStatusButtonClick = async (order: Order) => {
     try {
-      const updatedOrder = await apiService.collectPayment(selectedOrder._id, newReceivedAmount);
-      setOrders(orders.map(order => 
-        order._id === selectedOrder._id ? { ...order, ...updatedOrder } : order
-      ));
-      toast({
-        title: "Success",
-        description: "Payment collected successfully",
-      });
-      setIsPaymentModalOpen(false);
-      setSelectedOrder(null);
-    } catch (error) {
+      if (order.type === 'Inquiry' && order.status === 'Pending') {
+        // Convert inquiry to confirm order
+        await apiService.updateOrder(order._id, { type: 'Confirm' });
+        setOrders(orders.map(o => 
+          o._id === order._id ? { ...o, type: 'Confirm' as any } : o
+        ));
+        toast({
+          title: "Success",
+          description: "Order confirmed successfully",
+        });
+      } else {
+        const nextStatus = getNextStatus(order.status, order.type);
+        if (nextStatus) {
+          await apiService.updateOrder(order._id, { status: nextStatus });
+          setOrders(orders.map(o => 
+            o._id === order._id ? { ...o, status: nextStatus as any } : o
+          ));
+          toast({
+            title: "Success",
+            description: `Order status updated to ${nextStatus}`,
+          });
+        }
+      }
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to collect payment",
+        description: error?.message || "Failed to update order",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getNextStatus = (currentStatus: string, orderType: string) => {
+    if (orderType === 'Inquiry') {
+      return currentStatus === 'Pending' ? 'Confirm Order' : null;
+    }
+    
+    if (currentStatus === 'Pending') return 'Running';
+    if (currentStatus === 'Running') return 'Done';
+    return null;
+  };
+
+  const handlePaymentCollected = async (newReceivedAmount: number) => {
+    if (!selectedOrder) return;
+
+    setIsPaymentLoading(true);
+    try {
+      await apiService.collectPayment(selectedOrder._id, newReceivedAmount);
+      
+      // Update the order in the list
+      setOrders(orders.map(order => 
+        order._id === selectedOrder._id 
+          ? { 
+              ...order, 
+              receivedPayment: newReceivedAmount,
+              paymentStatus: newReceivedAmount >= order.totalAmount ? 'Paid' : 'Unpaid'
+            }
+          : order
+      ));
+
+      toast({
+        title: "Success",
+        description: `Payment of ₹${(newReceivedAmount - selectedOrder.receivedPayment).toLocaleString('en-IN')} collected successfully`,
+      });
+
+      setIsPaymentModalOpen(false);
+      setSelectedOrder(null);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error?.message || "Failed to collect payment",
         variant: "destructive",
       });
     } finally {
@@ -139,15 +149,9 @@ export const OrdersList: React.FC = () => {
     }
   };
 
-  const openPaymentModal = (order: Order) => {
-    setSelectedOrder(order);
-    setIsPaymentModalOpen(true);
-  };
-
   const filteredOrders = orders.filter(order => {
     // Safety check for order object
     if (!order || typeof order !== 'object') {
-      console.warn('Invalid order found during filtering:', order);
       return false;
     }
     
@@ -162,52 +166,12 @@ export const OrdersList: React.FC = () => {
       const orderDate = new Date(order.addDate);
       const from = new Date(fromDate);
       const to = new Date(toDate);
+      to.setHours(23, 59, 59, 999); // End of day
       matchesDate = orderDate >= from && orderDate <= to;
     }
     
     return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
-
-  const getNextStatus = (currentStatus: string, orderType: string) => {
-    if (orderType === 'Inquiry') {
-      return currentStatus === 'Pending' ? 'Confirm Order' : null;
-    }
-    
-    if (currentStatus === 'Pending') return 'Running';
-    if (currentStatus === 'Running') return 'Done';
-    return null;
-  };
-
-  const handleOrderTypeUpdate = async (orderId: string, newType: string) => {
-    try {
-      await apiService.updateOrder(orderId, { type: newType });
-      setOrders(orders.map(order => 
-        order._id === orderId ? { ...order, type: newType as any } : order
-      ));
-      toast({
-        title: "Success",
-        description: "Order type updated successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update order type",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleStatusButtonClick = (order: Order) => {
-    if (order.type === 'Inquiry' && order.status === 'Pending') {
-      // Convert inquiry to confirm order
-      handleOrderTypeUpdate(order._id, 'Confirm');
-    } else {
-      const nextStatus = getNextStatus(order.status, order.type);
-      if (nextStatus) {
-        handleStatusUpdate(order._id, nextStatus);
-      }
-    }
-  };
 
   if (isLoading) {
     return (
@@ -218,13 +182,18 @@ export const OrdersList: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-card border-b border-border p-4 sticky top-0 z-30">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">Orders</h1>
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Orders</h1>
+            <p className="text-sm text-muted-foreground">
+              {filteredOrders.length} of {orders.length} orders
+            </p>
+          </div>
           {user?.role === 'admin' && (
-            <Button asChild size="sm" className="bg-primary hover:bg-primary-hover">
+            <Button asChild className="bg-primary hover:bg-primary-hover text-primary-foreground">
               <Link to="/orders/new">
                 <Plus className="w-4 h-4 mr-2" />
                 New Order
@@ -235,20 +204,28 @@ export const OrdersList: React.FC = () => {
       </header>
 
       <div className="p-4 space-y-4">
-        {/* Search and Filters */}
+        {/* Filters */}
         <Card className="shadow-card">
-          <CardContent className="p-4 space-y-3">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Filter className="w-5 h-5" />
+              Filters
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Search orders..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search by order name or number..."
                 className="pl-10"
               />
             </div>
-            
-            <div className="grid grid-cols-2 gap-3">
+
+            {/* Filter Row */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Status" />
@@ -260,7 +237,7 @@ export const OrdersList: React.FC = () => {
                   <SelectItem value="Done">Done</SelectItem>
                 </SelectContent>
               </Select>
-              
+
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Type" />
@@ -271,30 +248,23 @@ export const OrdersList: React.FC = () => {
                   <SelectItem value="Confirm">Confirm</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                placeholder="From Date"
+              />
+
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                placeholder="To Date"
+              />
             </div>
 
-            {/* Date Filters */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground">From Date</label>
-                <Input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => setFromDate(e.target.value)}
-                  className="text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-muted-foreground">To Date</label>
-                <Input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => setToDate(e.target.value)}
-                  className="text-sm"
-                />
-              </div>
-            </div>
-
+            {/* Clear Date Filter Button */}
             {(fromDate || toDate) && (
               <Button 
                 variant="outline" 
@@ -320,21 +290,17 @@ export const OrdersList: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            filteredOrders.map((order, index) => {
-              console.log(`Rendering order ${index}:`, order);
-              if (!order || !order._id) {
-                console.error(`Order at index ${index} missing _id during render:`, order);
-                return null;
-              }
-              return (
-              <Card key={order._id} className="shadow-card">
+            filteredOrders.map((order) => (
+              <Card key={order._id} className="shadow-card hover:shadow-lg transition-shadow">
                 <CardContent className="p-4">
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-foreground truncate">{order.orderName}</h3>
-                        <p className="text-sm text-muted-foreground">#{order.number}</p>
+                        <h3 className="font-semibold text-foreground text-lg truncate">
+                          {order.orderName}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">#{order.number || 'N/A'}</p>
                       </div>
                       <div className="flex gap-2">
                         <StatusBadge status={order.status} />
@@ -344,194 +310,148 @@ export const OrdersList: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Details */}
-                     <div className="space-y-2 text-sm">
-                       {/* Client Info */}
-                        {(() => {
-                          const c: any = (order as any).clientId;
-                          const hasObj = c && typeof c === 'object';
-                          const hasFlat = (order as any).clientName;
-                          if (hasObj) {
-                            return (
-                              <>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Client:</span>
-                                  <span className="text-foreground font-medium">{c.name}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Phone:</span>
-                                  <span className="text-foreground">{c.mobileNumber}</span>
-                                </div>
-                                {c.address && (
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Address:</span>
-                                    <span className="text-foreground text-right ml-2">{c.address}{c.city ? `, ${c.city}` : ''}</span>
-                                  </div>
-                                )}
-                              </>
-                            );
-                          }
-                          if (hasFlat) {
-                            return (
-                              <>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Client:</span>
-                                  <span className="text-foreground font-medium">{(order as any).clientName}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Phone:</span>
-                                  <span className="text-foreground">{(order as any).clientMobileNumber}</span>
-                                </div>
-                                {(order as any).clientAddress && (
-                                  <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Address:</span>
-                                    <span className="text-foreground text-right ml-2">{(order as any).clientAddress}{(order as any).clientCity ? `, ${(order as any).clientCity}` : ''}</span>
-                                  </div>
-                                )}
-                              </>
-                            );
-                          }
-                          const idText = typeof (order as any).clientId === 'string' ? (order as any).clientId : (c && c._id ? c._id : '—');
-                          return (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Client:</span>
-                              <span className="text-foreground">{idText}</span>
-                            </div>
-                          );
-                        })()}
+                    {/* Client Info */}
+                    {(() => {
+                      const clientData = order.clientId && typeof order.clientId === 'object' 
+                        ? order.clientId 
+                        : {
+                            name: (order as any).clientName,
+                            mobileNumber: (order as any).clientMobileNumber,
+                            address: (order as any).clientAddress,
+                            city: (order as any).clientCity
+                          };
                       
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Work:</span>
-                        <span className="text-foreground font-medium truncate ml-2">{order.work}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Delivery:</span>
-                        <span className="text-foreground">{new Date(order.deliveryDate).toLocaleDateString()}</span>
-                      </div>
-                      
-                      {/* Payment Info */}
-                      {order.totalAmount > 0 && (
-                        <>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Amount:</span>
-                            <span className="text-foreground font-medium">₹{order.totalAmount.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-muted-foreground">Received:</span>
-                            <span className="text-success font-medium">₹{order.receivedPayment.toLocaleString()}</span>
-                          </div>
-                          {order.receivedPayment < order.totalAmount && (
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Pending:</span>
-                              <span className="text-destructive font-medium">₹{(order.totalAmount - order.receivedPayment).toLocaleString()}</span>
+                      if (clientData.name) {
+                        return (
+                          <div className="bg-muted/30 p-3 rounded-lg border border-border">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                <User className="w-4 h-4 text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-foreground">{clientData.name}</p>
+                                <p className="text-sm text-muted-foreground">{clientData.mobileNumber}</p>
+                                {clientData.address && (
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {clientData.address}{clientData.city ? `, ${clientData.city}` : ''}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          )}
-                        </>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
+                    {/* Work Description */}
+                    <div className="bg-card p-3 rounded-lg border border-border">
+                      <p className="text-sm text-muted-foreground mb-1">Work Description:</p>
+                      <p className="text-sm text-foreground line-clamp-3">{order.work}</p>
+                    </div>
+                    
+                    {/* Date Information */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-card p-3 rounded-lg border border-border">
+                        <p className="text-xs text-muted-foreground mb-1">Added Date</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {new Date(order.addDate).toLocaleDateString('en-IN')}
+                        </p>
+                      </div>
+                      <div className="bg-card p-3 rounded-lg border border-border">
+                        <p className="text-xs text-muted-foreground mb-1">Delivery Date</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {new Date(order.deliveryDate).toLocaleDateString('en-IN')}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Payment Information */}
+                    <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-4 rounded-lg border border-primary/20">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Total Amount</p>
+                          <p className="text-lg font-bold text-foreground">
+                            ₹{order.totalAmount.toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Received</p>
+                          <p className="text-lg font-bold text-success">
+                            ₹{order.receivedPayment.toLocaleString('en-IN')}
+                          </p>
+                        </div>
+                      </div>
+                      {order.totalAmount > order.receivedPayment && (
+                        <div className="mt-2 pt-2 border-t border-primary/20">
+                          <p className="text-xs text-muted-foreground mb-1">Pending Amount</p>
+                          <p className="text-sm font-semibold text-destructive">
+                            ₹{(order.totalAmount - order.receivedPayment).toLocaleString('en-IN')}
+                          </p>
+                        </div>
                       )}
-                      
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Payment:</span>
+                      <div className="mt-3 flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Status:</span>
                         <StatusBadge status={order.paymentStatus} type="payment" />
                       </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="space-y-3 pt-3 border-t border-border">
-                      {/* Progress Actions Row */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {/* Status Update Button */}
-                        {(() => {
-                          if (order.type === 'Inquiry' && order.status === 'Pending') {
-                            return (
-                              <Button
-                                size="sm"
-                                onClick={() => handleStatusButtonClick(order)}
-                                className="flex-1 min-w-[120px] bg-primary hover:bg-primary-hover text-primary-foreground"
-                              >
-                                Confirm Order
-                              </Button>
-                            );
-                          }
-                          
-                          const nextStatus = getNextStatus(order.status, order.type);
-                          return nextStatus && (
-                            <Button
-                              size="sm"
-                              onClick={() => handleStatusUpdate(order._id, nextStatus)}
-                              className="flex-1 min-w-[120px] bg-primary hover:bg-primary-hover text-primary-foreground"
-                            >
-                              Mark as {nextStatus}
-                            </Button>
-                          );
-                        })()}
-
-                        {/* Direct Payment Status Update for Admin (no collection modal) */}
-                        {user?.role === 'admin' && order.paymentStatus === 'Unpaid' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handlePaymentUpdate(order._id, 'Paid')}
-                            className="flex-1 min-w-[120px] border-success text-success hover:bg-success hover:text-success-foreground"
-                          >
-                            <DollarSign className="w-4 h-4 mr-1" />
-                            Mark Paid
-                          </Button>
-                        )}
-                      </div>
-
-                      {/* Action Buttons Row */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex gap-2">
-                          {/* View Button */}
-                          <Button asChild size="sm" variant="outline" className="px-3">
-                            <Link to={`/orders/${order._id}`}>
-                              <Eye className="w-4 h-4 mr-1" />
-                              View
+                    {/* Action Buttons */}
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Button asChild size="sm" variant="outline" className="flex-1">
+                          <Link to={`/orders/${order._id}`}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </Link>
+                        </Button>
+                        
+                        {user?.role === 'admin' && (
+                          <Button asChild size="sm" variant="outline">
+                            <Link to={`/orders/${order._id}/edit`}>
+                              <Edit className="w-4 h-4" />
                             </Link>
                           </Button>
-
-                          {/* File Link */}
-                          {order.url && (
-                            <Button asChild size="sm" variant="outline" className="px-3">
-                              <a href={order.url} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="w-4 h-4 mr-1" />
-                                File
-                              </a>
-                            </Button>
-                          )}
-                        </div>
-
-                        {/* Admin Only Actions */}
-                        {user?.role === 'admin' && (
-                          <div className="flex gap-1">
-                            <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
-                              <Link to={`/orders/${order._id}/edit`}>
-                                <Edit className="w-4 h-4" />
-                              </Link>
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleDelete(order._id)}
-                              className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
                         )}
                       </div>
+
+                      {/* Payment Collection Button */}
+                      {user?.role === 'admin' && order.totalAmount > order.receivedPayment && (
+                        <Button
+                          onClick={() => {
+                            setSelectedOrder(order);
+                            setIsPaymentModalOpen(true);
+                          }}
+                          className="w-full bg-primary hover:bg-primary-hover text-primary-foreground"
+                        >
+                          <DollarSign className="w-4 h-4 mr-2" />
+                          Collect Payment (₹{(order.totalAmount - order.receivedPayment).toLocaleString('en-IN')} pending)
+                        </Button>
+                      )}
+
+                      {user?.role === 'admin' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteOrder(order._id)}
+                          className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Order
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              );
-            }).filter(Boolean)
+            ))
           )}
         </div>
       </div>
 
+      {/* Mobile Navigation */}
       <MobileNavigation />
-      
+
       {/* Payment Modal */}
       {selectedOrder && (
         <PaymentModal
@@ -541,7 +461,7 @@ export const OrdersList: React.FC = () => {
             setIsPaymentModalOpen(false);
             setSelectedOrder(null);
           }}
-          onPaymentCollected={handlePaymentCollection}
+          onPaymentCollected={handlePaymentCollected}
           isLoading={isPaymentLoading}
         />
       )}

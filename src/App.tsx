@@ -10,6 +10,7 @@ import { AdminDashboard } from "./pages/AdminDashboard";
 import { UserDashboard } from "./pages/UserDashboard";
 import { OrdersList } from "./pages/OrdersList";
 import { CreateOrder } from "./pages/CreateOrder";
+import { EditOrder } from "./pages/EditOrder";
 import { CalendarView } from "./pages/CalendarView";
 import { Analytics } from "./pages/Analytics";
 import { OrderDetail } from "./pages/OrderDetail";
@@ -101,6 +102,15 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <OrderDetail />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/orders/:id/edit"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <EditOrder />
           </ProtectedRoute>
         }
       />

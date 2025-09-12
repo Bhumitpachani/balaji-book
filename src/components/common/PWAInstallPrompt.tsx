@@ -14,9 +14,9 @@ export const PWAInstallPrompt: React.FC = () => {
       <Card className="p-4 bg-card border shadow-lg">
         <div className="flex items-center gap-3">
             <img 
-            src="https://5.imimg.com/data5/YD/VE/MY-27589869/balaji-engineering-works-90x90.jpg" 
-            alt="App Icon" 
-            className="w-12 h-12 rounded-lg flex-shrink-0"
+            src="/icons/icon-152x152.png" 
+            alt="BalajiBook App Icon" 
+            className="w-12 h-12 rounded-lg flex-shrink-0 object-cover"
           />
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-card-foreground">Install BalajiBook</h3>
