@@ -37,7 +37,6 @@ export interface CreateClientData {
 
 export interface CreateOrderData {
   orderName: string;
-  number: string;
   work: string;
   status: string;
   addDate: string;
@@ -47,6 +46,10 @@ export interface CreateOrderData {
   totalAmount: number;
   receivedPayment: number;
   clientId: string;
+  clientName: string;
+  clientMobileNumber: string;
+  clientAddress?: string;
+  clientCity?: string;
   file?: File;
 }
 
@@ -128,8 +131,12 @@ class ApiService {
     return this.makeRequest(`${API_BASE_URL}/clients`);
   }
 
-  async getClientById(id: string): Promise<Client> {
+  async getClientById(id: string): Promise<{ client: Client; orders: Order[] }> {
     return this.makeRequest(`${API_BASE_URL}/clients/${id}`);
+  }
+
+  async getNextOrderNumber(): Promise<{ nextNumber: number }> {
+    return this.makeRequest(`${API_BASE_URL}/orders/next-number`);
   }
 
   async updateClient(id: string, data: Partial<CreateClientData>): Promise<Client> {

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, Clock, CheckCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FileText, Calendar, Clock, CheckCircle, Search } from "lucide-react";
 import { Link } from "react-router-dom";
 import { apiService, Order } from "@/lib/api";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -13,6 +15,8 @@ export const UserDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   useEffect(() => {
     loadOrders();
@@ -31,12 +35,20 @@ export const UserDashboard: React.FC = () => {
     }
   };
 
-  const recentOrders = orders.slice(0, 3);
+  const filteredOrders = orders.filter(order => {
+    if (!fromDate || !toDate) return true;
+    const orderDate = new Date(order.addDate);
+    const from = new Date(fromDate);
+    const to = new Date(toDate);
+    return orderDate >= from && orderDate <= to;
+  });
+
+  const recentOrders = filteredOrders.slice(0, 3);
   const stats = {
-    total: orders.length,
-    pending: orders.filter(o => o.status === 'Pending').length,
-    running: orders.filter(o => o.status === 'Running').length,
-    completed: orders.filter(o => o.status === 'Done').length,
+    total: filteredOrders.length,
+    pending: filteredOrders.filter(o => o.status === 'Pending').length,
+    running: filteredOrders.filter(o => o.status === 'Running').length,
+    completed: filteredOrders.filter(o => o.status === 'Done').length,
   };
 
   if (isLoading) {
@@ -63,6 +75,46 @@ export const UserDashboard: React.FC = () => {
       </header>
 
       <div className="p-4 space-y-6">
+        {/* Date Filter */}
+        <Card className="shadow-card">
+          <CardContent className="p-4">
+            <h3 className="font-medium text-foreground mb-3">Filter by Date</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-muted-foreground">From Date</label>
+                <Input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-muted-foreground">To Date</label>
+                <Input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+            </div>
+            {(fromDate || toDate) && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setFromDate('');
+                  setToDate('');
+                }}
+                className="w-full mt-3"
+              >
+                Clear Date Filter
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Quick Stats */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="shadow-card">

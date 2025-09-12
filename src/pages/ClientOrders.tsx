@@ -3,7 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Eye, User, Phone, MapPin } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Eye, User, Phone, MapPin, Search, Filter } from "lucide-react";
 import { apiService, Client, Order } from "@/lib/api";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +15,11 @@ export const ClientOrders: React.FC = () => {
   const { toast } = useToast();
   const [client, setClient] = useState<Client | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
 
   useEffect(() => {
     if (id) {
@@ -25,19 +31,10 @@ export const ClientOrders: React.FC = () => {
     if (!id) return;
     
     try {
-      const [clientData, ordersData] = await Promise.all([
-        apiService.getClientById(id),
-        apiService.getAllOrders()
-      ]);
-      
-      setClient(clientData);
-      // Filter orders for this client
-      const clientOrders = ordersData.filter(order => 
-        typeof order.clientId === 'string' 
-          ? order.clientId === id 
-          : order.clientId._id === id
-      );
-      setOrders(clientOrders);
+      const data = await apiService.getClientById(id);
+      setClient(data.client);
+      setOrders(data.orders);
+      setFilteredOrders(data.orders);
     } catch (error) {
       toast({
         title: "Error",
@@ -48,6 +45,18 @@ export const ClientOrders: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    const filtered = orders.filter(order => {
+      const matchesSearch = order.orderName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           order.number.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
+      const matchesType = typeFilter === 'all' || order.type === typeFilter;
+      
+      return matchesSearch && matchesStatus && matchesType;
+    });
+    setFilteredOrders(filtered);
+  }, [orders, searchTerm, statusFilter, typeFilter]);
 
   if (isLoading) {
     return (
@@ -114,18 +123,58 @@ export const ClientOrders: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Search and Filters */}
+        <Card className="shadow-card">
+          <CardContent className="p-4 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+              <Input
+                placeholder="Search orders..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Running">Running</SelectItem>
+                  <SelectItem value="Done">Done</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="Inquiry">Inquiry</SelectItem>
+                  <SelectItem value="Confirm">Confirm</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Orders List */}
         <div className="space-y-3">
-          <h3 className="font-medium text-foreground">Order History</h3>
+          <h3 className="font-medium text-foreground">Order History ({filteredOrders.length})</h3>
           
-          {orders.length === 0 ? (
+          {filteredOrders.length === 0 ? (
             <Card className="shadow-card">
               <CardContent className="p-8 text-center">
                 <p className="text-muted-foreground">No orders found for this client</p>
               </CardContent>
             </Card>
           ) : (
-            orders.map((order) => (
+            filteredOrders.map((order) => (
               <Card key={order._id} className="shadow-card hover:shadow-card-hover transition-shadow">
                 <CardContent className="p-4">
                   <div className="space-y-3">

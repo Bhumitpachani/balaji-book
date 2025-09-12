@@ -21,6 +21,8 @@ export const OrdersList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
@@ -138,7 +140,16 @@ export const OrdersList: React.FC = () => {
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     const matchesType = typeFilter === 'all' || order.type === typeFilter;
     
-    return matchesSearch && matchesStatus && matchesType;
+    // Date filtering
+    let matchesDate = true;
+    if (fromDate && toDate) {
+      const orderDate = new Date(order.addDate);
+      const from = new Date(fromDate);
+      const to = new Date(toDate);
+      matchesDate = orderDate >= from && orderDate <= to;
+    }
+    
+    return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
 
   const getNextStatus = (currentStatus: string, orderType: string) => {
@@ -245,6 +256,42 @@ export const OrdersList: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Date Filters */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-muted-foreground">From Date</label>
+                <Input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-muted-foreground">To Date</label>
+                <Input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+            </div>
+
+            {(fromDate || toDate) && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setFromDate('');
+                  setToDate('');
+                }}
+                className="w-full"
+              >
+                Clear Date Filter
+              </Button>
+            )}
           </CardContent>
         </Card>
 
@@ -276,14 +323,31 @@ export const OrdersList: React.FC = () => {
                     </div>
 
                     {/* Details */}
-                    <div className="space-y-2 text-sm">
-                      {/* Client Info */}
-                      {typeof order.clientId === 'object' && order.clientId && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Client:</span>
-                          <span className="text-foreground font-medium">{order.clientId.name}</span>
-                        </div>
-                      )}
+                     <div className="space-y-2 text-sm">
+                       {/* Client Info */}
+                       {typeof order.clientId === 'object' && order.clientId ? (
+                         <>
+                           <div className="flex justify-between">
+                             <span className="text-muted-foreground">Client:</span>
+                             <span className="text-foreground font-medium">{order.clientId.name}</span>
+                           </div>
+                           <div className="flex justify-between">
+                             <span className="text-muted-foreground">Phone:</span>
+                             <span className="text-foreground">{order.clientId.mobileNumber}</span>
+                           </div>
+                           {order.clientId.address && (
+                             <div className="flex justify-between">
+                               <span className="text-muted-foreground">Address:</span>
+                               <span className="text-foreground text-right ml-2">{order.clientId.address}, {order.clientId.city}</span>
+                             </div>
+                           )}
+                         </>
+                       ) : (
+                         <div className="flex justify-between">
+                           <span className="text-muted-foreground">Client ID:</span>
+                           <span className="text-foreground font-medium">{typeof order.clientId === 'string' ? order.clientId : order.clientId._id}</span>
+                         </div>
+                       )}
                       
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Work:</span>
@@ -350,16 +414,16 @@ export const OrdersList: React.FC = () => {
                           );
                         })()}
 
-                        {/* Payment Collection for Admin */}
-                        {user?.role === 'admin' && order.totalAmount && order.receivedPayment < order.totalAmount && (
+                        {/* Direct Payment Status Update for Admin (no collection modal) */}
+                        {user?.role === 'admin' && order.paymentStatus === 'Unpaid' && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => openPaymentModal(order)}
-                            className="flex-1 min-w-[120px] border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                            onClick={() => handlePaymentUpdate(order._id, 'Paid')}
+                            className="flex-1 min-w-[120px] border-success text-success hover:bg-success hover:text-success-foreground"
                           >
                             <DollarSign className="w-4 h-4 mr-1" />
-                            Collect Payment
+                            Mark Paid
                           </Button>
                         )}
                       </div>

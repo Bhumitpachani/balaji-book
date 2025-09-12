@@ -23,7 +23,6 @@ export const CreateOrder: React.FC = () => {
   
   const [formData, setFormData] = useState({
     orderName: '',
-    number: '',
     work: '',
     status: 'Pending',
     addDate: new Date().toISOString().split('T')[0],
@@ -33,10 +32,22 @@ export const CreateOrder: React.FC = () => {
     totalAmount: 0,
     receivedPayment: 0,
   });
+  const [orderNumber, setOrderNumber] = useState<string>('');
 
   useEffect(() => {
     loadClients();
+    loadNextOrderNumber();
   }, []);
+
+  const loadNextOrderNumber = async () => {
+    try {
+      const data = await apiService.getNextOrderNumber();
+      setOrderNumber(data.nextNumber.toString());
+    } catch (error) {
+      console.error('Failed to load next order number:', error);
+      setOrderNumber('1'); // Fallback to 1 if API fails
+    }
+  };
 
   const loadClients = async () => {
     try {
@@ -95,6 +106,10 @@ export const CreateOrder: React.FC = () => {
       const orderData = {
         ...formData,
         clientId: selectedClient._id,
+        clientName: selectedClient.name,
+        clientMobileNumber: selectedClient.mobileNumber,
+        clientAddress: selectedClient.address,
+        clientCity: selectedClient.city,
         ...(selectedFile && { file: selectedFile })
       };
 
@@ -207,14 +222,15 @@ export const CreateOrder: React.FC = () => {
 
               {/* Order Number */}
               <div className="space-y-2">
-                <Label htmlFor="number">Order Number *</Label>
+                <Label htmlFor="number">Order Number</Label>
                 <Input
                   id="number"
-                  value={formData.number}
-                  onChange={(e) => handleInputChange('number', e.target.value)}
-                  placeholder="Enter order number"
-                  required
+                  value={orderNumber}
+                  readOnly
+                  className="bg-muted cursor-not-allowed"
+                  placeholder="Auto-generated"
                 />
+                <p className="text-xs text-muted-foreground">Order number will be auto-generated</p>
               </div>
 
               {/* Work Description */}
