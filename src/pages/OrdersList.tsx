@@ -34,6 +34,16 @@ export const OrdersList: React.FC = () => {
   const loadOrders = async () => {
     try {
       const data = await apiService.getAllOrders();
+      console.log('Raw orders data:', data);
+      console.log('Orders array check:', Array.isArray(data));
+      if (Array.isArray(data)) {
+        data.forEach((order, index) => {
+          console.log(`Order ${index}:`, order);
+          if (!order || !order._id) {
+            console.error(`Order at index ${index} is missing _id:`, order);
+          }
+        });
+      }
       setOrders(data);
     } catch (error) {
       toast({
@@ -135,14 +145,20 @@ export const OrdersList: React.FC = () => {
   };
 
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.orderName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (order.number ? order.number.toLowerCase().includes(searchTerm.toLowerCase()) : false);
+    // Safety check for order object
+    if (!order || typeof order !== 'object') {
+      console.warn('Invalid order found during filtering:', order);
+      return false;
+    }
+    
+    const matchesSearch = (order.orderName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (order.number || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     const matchesType = typeFilter === 'all' || order.type === typeFilter;
     
     // Date filtering
     let matchesDate = true;
-    if (fromDate && toDate) {
+    if (fromDate && toDate && order.addDate) {
       const orderDate = new Date(order.addDate);
       const from = new Date(fromDate);
       const to = new Date(toDate);
@@ -304,7 +320,13 @@ export const OrdersList: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            filteredOrders.map((order) => (
+            filteredOrders.map((order, index) => {
+              console.log(`Rendering order ${index}:`, order);
+              if (!order || !order._id) {
+                console.error(`Order at index ${index} missing _id during render:`, order);
+                return null;
+              }
+              return (
               <Card key={order._id} className="shadow-card">
                 <CardContent className="p-4">
                   <div className="space-y-3">
@@ -502,7 +524,8 @@ export const OrdersList: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))
+              );
+            }).filter(Boolean)
           )}
         </div>
       </div>
