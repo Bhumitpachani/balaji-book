@@ -320,7 +320,7 @@ export const OrdersList: React.FC = () => {
                       const clientData = order.clientId && typeof order.clientId === 'object' 
                         ? order.clientId 
                         : {
-                            // name: (order as any).clientName,
+                            name: (order as any).clientName,
                             mobileNumber: (order as any).clientMobileNumber,
                             address: (order as any).clientAddress,
                             city: (order as any).clientCity
@@ -334,7 +334,7 @@ export const OrdersList: React.FC = () => {
                                 <User className="w-4 h-4 text-primary" />
                               </div>
                               <div className="flex-1 min-w-0">
-{/*                                 <p className="font-medium text-foreground">{clientData.name}</p> */}
+                                <p className="font-medium text-foreground">{clientData.name}</p>
                                 <p className="text-sm text-muted-foreground">{clientData.mobileNumber}</p>
                                 {clientData.address && (
                                   <p className="text-xs text-muted-foreground truncate">
