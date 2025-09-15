@@ -182,7 +182,7 @@ export const ClientOrders: React.FC = () => {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-foreground truncate">{order.orderName}</h4>
-                        <p className="text-sm text-muted-foreground">#{order.number}</p>
+                        <p className="text-sm text-muted-foreground">#{order._id}</p>
                       </div>
                       <div className="flex gap-2">
                         <StatusBadge status={order.status} />
