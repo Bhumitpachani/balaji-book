@@ -219,7 +219,7 @@ export const EditOrder: React.FC = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Order Number - Read only */}
-              <div className="space-y-2">
+{/*               <div className="space-y-2">
                 <Label htmlFor="orderNumber">Order Number</Label>
                 <Input
                   id="orderNumber"
@@ -227,7 +227,7 @@ export const EditOrder: React.FC = () => {
                   readOnly
                   className="bg-muted"
                 />
-              </div>
+              </div> */}
 
               {/* Client Selection */}
               <div className="space-y-2">
@@ -316,7 +316,7 @@ export const EditOrder: React.FC = () => {
               </div>
 
               {/* Work Description */}
-              <div className="space-y-2">
+{/*               <div className="space-y-2">
                 <Label htmlFor="work">Work Description *</Label>
                 <Textarea
                   id="work"
@@ -326,7 +326,7 @@ export const EditOrder: React.FC = () => {
                   rows={3}
                   required
                 />
-              </div>
+              </div> */}
 
               {/* Row 1: Status and Type */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
