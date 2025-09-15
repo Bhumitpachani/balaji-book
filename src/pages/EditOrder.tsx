@@ -304,7 +304,7 @@ export const EditOrder: React.FC = () => {
               </div>
 
               {/* Order Name */}
-              <div className="space-y-2">
+{/*               <div className="space-y-2">
                 <Label htmlFor="orderName">Order Name *</Label>
                 <Input
                   id="orderName"
@@ -313,10 +313,10 @@ export const EditOrder: React.FC = () => {
                   placeholder="Enter order name"
                   required
                 />
-              </div>
+              </div> */}
 
               {/* Work Description */}
-{/*               <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="work">Work Description *</Label>
                 <Textarea
                   id="work"
@@ -326,7 +326,7 @@ export const EditOrder: React.FC = () => {
                   rows={3}
                   required
                 />
-              </div> */}
+              </div>
 
               {/* Row 1: Status and Type */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
