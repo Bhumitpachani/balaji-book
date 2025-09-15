@@ -22,7 +22,6 @@ export const CreateOrder: React.FC = () => {
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   
   const [formData, setFormData] = useState({
-    orderName: '',
     work: '',
     status: 'Pending',
     addDate: new Date().toISOString().split('T')[0],
@@ -41,12 +40,12 @@ export const CreateOrder: React.FC = () => {
 
   const loadNextOrderNumber = async () => {
     try {
-      const ms = Date.now()
+      const ms = Date.now().toString();
       setOrderNumber(ms);
     } catch (error) {
-      const ms = Date.now()
+      const ms = Date.now().toString();
       console.error('Failed to load next order number:', error);
-      setOrderNumber(ms); // Fallback to 1 if API fails
+      setOrderNumber(ms); // Fallback if API fails
     }
   };
 
@@ -106,6 +105,7 @@ export const CreateOrder: React.FC = () => {
     try {
       const orderData = {
         ...formData,
+        orderName: selectedClient.name, // Use client name as order name
         clientId: selectedClient._id,
         clientName: selectedClient.name,
         clientMobileNumber: selectedClient.mobileNumber,
@@ -209,17 +209,6 @@ export const CreateOrder: React.FC = () => {
                 )}
               </div>
 
-              {/* Order Name */}
-              <div className="space-y-2">
-                <Label htmlFor="orderName">Order Name *</Label>
-                <Input
-                  id="orderName"
-                  value={formData.orderName}
-                  onChange={(e) => handleInputChange('orderName', e.target.value)}
-                  placeholder="Enter order name"
-                  required
-                />
-              </div>
 
               {/* Order Number */}
 {/*               <div className="space-y-2">

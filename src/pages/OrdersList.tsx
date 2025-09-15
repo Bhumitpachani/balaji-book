@@ -155,10 +155,13 @@ export const OrdersList: React.FC = () => {
       return false;
     }
     
+    const clientName = typeof order.clientId === 'object' && order.clientId ? order.clientId.name : '';
+    const clientMobile = typeof order.clientId === 'object' && order.clientId ? order.clientId.mobileNumber : '';
+    
     const matchesSearch = (order.orderName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (order.number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (order.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (order.clientMobileNumber || '').toLowerCase().includes(searchTerm.toLowerCase());
+                         clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         clientMobile.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
     const matchesType = typeFilter === 'all' || order.type === typeFilter;
     

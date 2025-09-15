@@ -185,7 +185,9 @@ export const OrderDetail: React.FC = () => {
           <CardHeader className="pb-3">
             <div className="flex items-start justify-between">
               <div>
-                <CardTitle className="text-lg text-foreground">{order.orderName}</CardTitle>
+                <CardTitle className="text-lg text-foreground">
+                  {typeof order.clientId === 'object' && order.clientId ? order.clientId.name : 'Unknown Client'}
+                </CardTitle>
                 <p className="text-sm text-muted-foreground">Order #{order.number}</p>
               </div>
               <div className="flex gap-2">
