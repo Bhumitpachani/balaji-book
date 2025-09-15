@@ -118,7 +118,16 @@ export const OrdersList: React.FC = () => {
 
     setIsPaymentLoading(true);
     try {
+      // Check if this makes the payment complete
+      const isFullPayment = newReceivedAmount >= selectedOrder.totalAmount;
+      
+      // Update payment in backend
       await apiService.collectPayment(selectedOrder._id, newReceivedAmount);
+      
+      // If full payment, also update payment status
+      if (isFullPayment) {
+        await apiService.updateOrder(selectedOrder._id, { paymentStatus: 'Paid' });
+      }
       
       // Update the order in the list
       setOrders(orders.map(order => 
@@ -126,14 +135,14 @@ export const OrdersList: React.FC = () => {
           ? { 
               ...order, 
               receivedPayment: newReceivedAmount,
-              paymentStatus: newReceivedAmount >= order.totalAmount ? 'Paid' : 'Unpaid'
+              paymentStatus: isFullPayment ? 'Paid' : 'Unpaid'
             }
           : order
       ));
 
       toast({
         title: "Success",
-        description: `Payment of ₹${(newReceivedAmount - selectedOrder.receivedPayment).toLocaleString('en-IN')} collected successfully`,
+        description: `Payment of ₹${(newReceivedAmount - selectedOrder.receivedPayment).toLocaleString('en-IN')} collected successfully${isFullPayment ? '. Payment completed!' : ''}`,
       });
 
       setIsPaymentModalOpen(false);

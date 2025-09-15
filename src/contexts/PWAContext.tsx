@@ -35,11 +35,13 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     // Check if already installed
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isInWebAppiOS = (window.navigator as any).standalone === true;
     const isInstalled = localStorage.getItem('balajibook_installed') === 'true';
-    setIsInstalled(isStandalone || isInstalled);
+    
+    setIsInstalled(isStandalone || isInWebAppiOS || isInstalled);
 
     // Show install prompt on every visit if not installed
-    const shouldShowPrompt = !isStandalone && !isInstalled;
+    const shouldShowPrompt = !isStandalone && !isInWebAppiOS && !isInstalled;
     
     // Listen for the beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -53,12 +55,15 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     };
 
-    // If no beforeinstallprompt event (e.g., already dismissed), still show custom prompt
-    setTimeout(() => {
-      if (shouldShowPrompt && !deferredPrompt) {
+    // If no beforeinstallprompt event, show custom prompt for mobile browsers
+    const showCustomPrompt = () => {
+      if (shouldShowPrompt) {
         setIsInstallable(true);
       }
-    }, 2000); // Show after 2 seconds
+    };
+
+    // Show prompt after a delay
+    const timer = setTimeout(showCustomPrompt, 3000);
 
     // Listen for successful app installation
     const handleAppInstalled = () => {
@@ -73,6 +78,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      clearTimeout(timer);
     };
   }, []);
 
@@ -85,21 +91,35 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const installApp = async () => {
-    if (!deferredPrompt) return;
-
-    try {
-      await deferredPrompt.prompt();
-      const choiceResult = await deferredPrompt.userChoice;
+    if (deferredPrompt) {
+      try {
+        await deferredPrompt.prompt();
+        const choiceResult = await deferredPrompt.userChoice;
+        
+        if (choiceResult.outcome === 'accepted') {
+          setIsInstalled(true);
+          localStorage.setItem('balajibook_installed', 'true');
+        }
+        
+        setIsInstallable(false);
+        setDeferredPrompt(null);
+      } catch (error) {
+        console.error('Error installing app:', error);
+      }
+    } else {
+      // For browsers that don't support the API, show instructions
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/.test(navigator.userAgent);
       
-      if (choiceResult.outcome === 'accepted') {
-        setIsInstalled(true);
-        localStorage.setItem('balajibook_installed', 'true');
+      if (isIOS) {
+        alert('To install this app on your iOS device, tap the Share button and then "Add to Home Screen".');
+      } else if (isAndroid) {
+        alert('To install this app, tap the menu button in your browser and select "Add to Home Screen" or "Install App".');
+      } else {
+        alert('To install this app, look for the install button in your browser\'s address bar or menu.');
       }
       
       setIsInstallable(false);
-      setDeferredPrompt(null);
-    } catch (error) {
-      console.error('Error installing app:', error);
     }
   };
 

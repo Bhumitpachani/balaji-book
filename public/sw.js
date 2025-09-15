@@ -1,9 +1,10 @@
-const CACHE_NAME = 'balajibook';
+const CACHE_NAME = 'balajibook-v2';
 const urlsToCache = [
   '/',
   '/manifest.json',
-  'https://5.imimg.com/data5/YD/VE/MY-27589869/balaji-engineering-works-90x90.jpg',
-  'https://5.imimg.com/data5/YD/VE/MY-27589869/balaji-engineering-works-90x90.jpg',
+  '/balaji-logo.jpg',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
 ];
 
 self.addEventListener('install', (event) => {
