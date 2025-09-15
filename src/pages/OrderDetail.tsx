@@ -268,7 +268,7 @@ export const OrderDetail: React.FC = () => {
                 })()}
 
                 {/* Admin Payment Actions */}
-                {user?.role === 'admin' && order.paymentStatus === 'Unpaid' && (
+{/*                 {user?.role === 'admin' && order.paymentStatus === 'Unpaid' && (
                   <Button
                     variant="outline"
                     onClick={() => handlePaymentUpdate('Paid')}
@@ -276,7 +276,7 @@ export const OrderDetail: React.FC = () => {
                   >
                     Mark as Paid
                   </Button>
-                )}
+                )} */}
               </div>
             </div>
           </CardContent>
