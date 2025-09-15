@@ -166,22 +166,25 @@ const AppRoutes = () => {
   );
 };
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <PWAProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <div className="app-shell">
-              <AppRoutes />
-            </div>
-          </BrowserRouter>
-        </PWAProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  console.log('App component rendering');
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <PWAProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <div className="app-shell">
+                <AppRoutes />
+              </div>
+            </BrowserRouter>
+          </PWAProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;

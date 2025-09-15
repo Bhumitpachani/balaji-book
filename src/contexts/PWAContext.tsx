@@ -21,13 +21,16 @@ const PWAContext = createContext<PWAContextType | undefined>(undefined);
 
 export const usePWA = () => {
   const context = useContext(PWAContext);
+  console.log('usePWA called, context:', context);
   if (!context) {
+    console.error('PWA context is undefined - component not wrapped in PWAProvider');
     throw new Error('usePWA must be used within a PWAProvider');
   }
   return context;
 };
 
 export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log('PWAProvider rendering');
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);

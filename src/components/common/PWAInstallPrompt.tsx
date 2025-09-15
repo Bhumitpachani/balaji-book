@@ -5,6 +5,7 @@ import { Download, X } from "lucide-react";
 import { usePWA } from "@/contexts/PWAContext";
 
 export const PWAInstallPrompt: React.FC = () => {
+  console.log('PWAInstallPrompt rendering');
   const { isInstallable, installApp, hideInstallPrompt } = usePWA();
 
   if (!isInstallable) return null;
