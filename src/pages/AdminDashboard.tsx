@@ -78,6 +78,15 @@ export const AdminDashboard: React.FC = () => {
             </Link>
           </Button>
         </div>
+        
+        <div className="w-full">
+          <Button asChild variant="secondary" className="w-full h-12">
+            <Link to="/admin/orders-table" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Orders Table & Export
+            </Link>
+          </Button>
+        </div>
 
         {/* Overview Stats */}
         <div className="grid grid-cols-2 gap-4">

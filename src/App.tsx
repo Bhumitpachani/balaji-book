@@ -17,6 +17,7 @@ import { OrderDetail } from "./pages/OrderDetail";
 import { ClientManagement } from "./pages/ClientManagement";
 import { CreateClient } from "./pages/CreateClient";
 import { ClientOrders } from "./pages/ClientOrders";
+import { AdminOrdersTable } from "./pages/AdminOrdersTable";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -156,6 +157,15 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <ClientOrders />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/admin/orders-table"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <AdminOrdersTable />
           </ProtectedRoute>
         }
       />
