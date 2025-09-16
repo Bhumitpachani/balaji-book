@@ -23,8 +23,14 @@ export interface Order {
   totalAmount: number;
   receivedPayment: number;
   clientId: string | Client;
+  clientName?: string;
+  clientMobileNumber?: string;
+  clientAddress?: string;
+  clientCity?: string;
   url?: string;
   publicId?: string;
+  createdAt?: string;
+  updatedAt?: string;
   __v: number;
 }
 

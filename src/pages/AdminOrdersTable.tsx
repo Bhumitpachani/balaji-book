@@ -56,8 +56,8 @@ export const AdminOrdersTable: React.FC = () => {
     if (searchTerm) {
       filtered = filtered.filter(order =>
         order.orderName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (typeof order.clientId === 'object' && order?.clientName?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (typeof order.clientId === 'object' && order?.clientMobileNumber?.includes(searchTerm)) ||
+        order.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.clientMobileNumber?.includes(searchTerm) ||
         order.work.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -65,6 +65,9 @@ export const AdminOrdersTable: React.FC = () => {
     if (statusFilter !== 'all') {
       filtered = filtered.filter(order => order.status === statusFilter);
     }
+
+    // Sort by creation date - newest first
+    filtered.sort((a, b) => new Date(b.createdAt || b.addDate).getTime() - new Date(a.createdAt || a.addDate).getTime());
 
     setFilteredOrders(filtered);
     setCurrentPage(1);
@@ -108,10 +111,10 @@ export const AdminOrdersTable: React.FC = () => {
 
       // Prepare Excel data
       const excelData = filteredOrders.map(order => ({
-        'Order Name': order._id,
-        'Client Name': typeof order.clientId === 'object' ? order?.clientName || 'N/A' : 'N/A',
-        'Mobile Number': typeof order.clientId === 'object' ? order?.clientMobileNumber || 'N/A' : 'N/A',
-        'Address': typeof order.clientId === 'object' ? `${order?.clientAddress || 'N/A'}, ${order?.clientCity || 'N/A'}` : 'N/A',
+        'Order Name': order.orderName,
+        'Client Name': order.clientName || 'N/A',
+        'Mobile Number': order.clientMobileNumber || 'N/A',
+        'Address': `${order.clientAddress || 'N/A'}, ${order.clientCity || 'N/A'}`,
         'Description': order.work,
         'Added Date': formatDate(order.addDate),
         'Delivery Date': formatDate(order.deliveryDate),
@@ -279,12 +282,11 @@ export const AdminOrdersTable: React.FC = () => {
                     <TableRow key={order._id}>
                       <TableCell className="font-medium">
                         <Link to={`/orders/${order._id}`} className="hover:text-primary">
-                          
-                          {typeof order.clientId === 'object' ? order?.clientName || 'N/A' : 'N/A'}
+                          {order.clientName || 'N/A'}
                         </Link>
                       </TableCell>
-                      <TableCell>{typeof order.clientId === 'object' ? order?.clientMobileNumber || 'N/A' : 'N/A'}</TableCell>
-                      <TableCell>{typeof order.clientId === 'object' ? `${order?.clientAddress || 'N/A'}, ${order?.clientCity || 'N/A'}` : 'N/A'}</TableCell>
+                      <TableCell>{order.clientMobileNumber || 'N/A'}</TableCell>
+                      <TableCell>{`${order.clientAddress || 'N/A'}, ${order.clientCity || 'N/A'}`}</TableCell>
                       <TableCell className="max-w-xs truncate" title={order.work}>
                         {order.work}
                       </TableCell>
