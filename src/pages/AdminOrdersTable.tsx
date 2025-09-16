@@ -111,7 +111,6 @@ export const AdminOrdersTable: React.FC = () => {
 
       // Prepare Excel data
       const excelData = filteredOrders.map(order => ({
-        'Order Name': order.orderName,
         'Client Name': order.clientName || 'N/A',
         'Mobile Number': order.clientMobileNumber || 'N/A',
         'Address': `${order.clientAddress || 'N/A'}, ${order.clientCity || 'N/A'}`,
@@ -123,7 +122,7 @@ export const AdminOrdersTable: React.FC = () => {
         'Status': order.status,
         'Payment Status': order.paymentStatus,
         'Type': order.type,
-        'Has File': order.url ? 'Yes' : 'No'
+        'File URL': order.url || 'No file'
       }));
 
       // Create Excel workbook
