@@ -31,7 +31,7 @@ const ProtectedRoute: React.FC<{
   const { isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
@@ -47,20 +47,10 @@ const AppRoutes = () => {
 
   return (
     <Routes>
-      {/* Public Routes */}
+      {/* Root Route - Login */}
       <Route 
-        path="/login" 
+        path="/" 
         element={!isAuthenticated ? <Login /> : <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />} 
-      />
-      
-      {/* Root Redirect */}
-      <Route
-        path="/"
-        element={
-          isAuthenticated
-            ? <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />
-            : <Navigate to="/login" replace />
-        }
       />
       
       {/* Protected Routes */}
