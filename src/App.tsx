@@ -52,16 +52,17 @@ const AppRoutes = () => {
         element={!isAuthenticated ? <Login /> : <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />} 
       />
       
-      {/* Protected Routes */}
+      {/* Root Redirect */}
       <Route
         path="/"
         element={
-          isAuthenticated 
-            ? <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace /> 
+          isAuthenticated
+            ? <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />
             : <Navigate to="/login" replace />
         }
       />
       
+      {/* Protected Routes */}
       <Route
         path="/admin"
         element={
