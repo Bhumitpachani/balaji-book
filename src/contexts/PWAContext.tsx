@@ -43,7 +43,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     setIsInstalled(isStandalone || isInWebAppiOS || isInstalled);
 
-    // Show install prompt on every visit if not installed
+    // Show install prompt on every visit if not installed and if we have a deferred prompt
     const shouldShowPrompt = !isStandalone && !isInWebAppiOS && !isInstalled;
     
     // Listen for the beforeinstallprompt event
@@ -52,21 +52,12 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const installEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(installEvent);
       
-      // Show install prompt if not already installed
+      // Only show install prompt if we have the native event and not already installed
       if (shouldShowPrompt) {
         setIsInstallable(true);
       }
     };
 
-    // If no beforeinstallprompt event, show custom prompt for mobile browsers
-    const showCustomPrompt = () => {
-      if (shouldShowPrompt) {
-        setIsInstallable(true);
-      }
-    };
-
-    // Show prompt after a delay
-    const timer = setTimeout(showCustomPrompt, 3000);
 
     // Listen for successful app installation
     const handleAppInstalled = () => {
@@ -81,7 +72,6 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
-      clearTimeout(timer);
     };
   }, []);
 
@@ -110,18 +100,8 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.error('Error installing app:', error);
       }
     } else {
-      // For browsers that don't support the API, show instructions
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      const isAndroid = /Android/.test(navigator.userAgent);
-      
-      if (isIOS) {
-        alert('To install this app on your iOS device, tap the Share button and then "Add to Home Screen".');
-      } else if (isAndroid) {
-        alert('To install this app, tap the menu button in your browser and select "Add to Home Screen" or "Install App".');
-      } else {
-        alert('To install this app, look for the install button in your browser\'s address bar or menu.');
-      }
-      
+      // For browsers that don't support the API, just hide the prompt
+      // The user can still install manually through browser menu
       setIsInstallable(false);
     }
   };
