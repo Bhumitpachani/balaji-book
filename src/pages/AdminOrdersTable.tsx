@@ -122,7 +122,7 @@ export const AdminOrdersTable: React.FC = () => {
         'Status': order.status,
         'Payment Status': order.paymentStatus,
         'Type': order.type,
-        'File URL': order.url || 'No file'
+        'File Path': order.url ? `uploaded_files/${order.orderName.replace(/[^a-zA-Z0-9]/g, '_')}_${order._id.slice(-6)}.${order.url.split('.').pop() || 'bin'}` : 'No file'
       }));
 
       // Create Excel workbook
@@ -257,8 +257,8 @@ export const AdminOrdersTable: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Table */}
-        <Card>
+        {/* Table - Desktop View */}
+        <Card className="hidden md:block">
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
@@ -328,6 +328,91 @@ export const AdminOrdersTable: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Mobile Cards View */}
+        <div className="md:hidden space-y-4">
+          {currentOrders.map((order) => (
+            <Card key={order._id}>
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start">
+                    <Link to={`/orders/${order._id}`} className="font-medium text-primary hover:text-primary/80">
+                      {order.clientName || 'N/A'}
+                    </Link>
+                    <div className="flex flex-col gap-1 items-end">
+                      <StatusBadge status={order.status} type="order" />
+                      <StatusBadge status={order.paymentStatus} type="payment" />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Mobile:</span>
+                      <p className="font-medium">{order.clientMobileNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Type:</span>
+                      <p className="font-medium">{order.type}</p>
+                    </div>
+                  </div>
+
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Address:</span>
+                    <p className="font-medium">{`${order.clientAddress || 'N/A'}, ${order.clientCity || 'N/A'}`}</p>
+                  </div>
+
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Description:</span>
+                    <p className="font-medium">{order.work}</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Added:</span>
+                      <p className="font-medium">{formatDate(order.addDate)}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Delivery:</span>
+                      <p className="font-medium">{formatDate(order.deliveryDate)}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Total:</span>
+                      <p className="font-medium">{formatCurrency(order.totalAmount)}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Received:</span>
+                      <p className="font-medium">{formatCurrency(order.receivedPayment)}</p>
+                    </div>
+                  </div>
+
+                  {order.url && (
+                    <div className="flex justify-end">
+                      <a 
+                        href={order.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-primary hover:text-primary/80 text-sm"
+                      >
+                        <FileText className="h-4 w-4" />
+                        View File
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+          {currentOrders.length === 0 && (
+            <Card>
+              <CardContent className="p-8 text-center text-muted-foreground">
+                No orders found
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
