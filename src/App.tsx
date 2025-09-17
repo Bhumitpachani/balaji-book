@@ -40,28 +40,12 @@ const ProtectedRoute: React.FC<{
   return <>{children}</>;
 };
 
-// Root Route Handler Component
-const RootRoute = () => {
-  const { isAuthenticated, user } = useAuth();
-
-  // If not authenticated, redirect to login
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // If authenticated, redirect to appropriate dashboard
-  return <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />;
-};
-
 // Main App Routes
 const AppRoutes = () => {
   const { isAuthenticated, user } = useAuth();
 
   return (
     <Routes>
-      {/* Root Route - handles both authenticated and unauthenticated users */}
-      <Route path="/" element={<RootRoute />} />
-      
       {/* Public Routes */}
       <Route 
         path="/login" 
@@ -69,6 +53,15 @@ const AppRoutes = () => {
       />
       
       {/* Protected Routes */}
+      <Route
+        path="/"
+        element={
+          isAuthenticated 
+            ? <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace /> 
+            : <Navigate to="/login" replace />
+        }
+      />
+      
       <Route
         path="/admin"
         element={
