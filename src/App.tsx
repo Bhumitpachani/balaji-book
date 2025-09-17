@@ -30,7 +30,7 @@ const ProtectedRoute: React.FC<{
   const { isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   if (allowedRoles && user && !allowedRoles.includes(user.role)) {
@@ -40,28 +40,35 @@ const ProtectedRoute: React.FC<{
   return <>{children}</>;
 };
 
+// Root Route Handler Component
+const RootRoute = () => {
+  const { isAuthenticated, user } = useAuth();
+
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If authenticated, redirect to appropriate dashboard
+  return <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />;
+};
+
 // Main App Routes
 const AppRoutes = () => {
   const { isAuthenticated, user } = useAuth();
 
   return (
     <Routes>
+      {/* Root Route - handles both authenticated and unauthenticated users */}
+      <Route path="/" element={<RootRoute />} />
+      
       {/* Public Routes */}
       <Route 
-        path="/" 
+        path="/login" 
         element={!isAuthenticated ? <Login /> : <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />} 
       />
       
       {/* Protected Routes */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Navigate to={user?.role === 'admin' ? '/admin' : '/dashboard'} replace />
-          </ProtectedRoute>
-        }
-      />
-      
       <Route
         path="/admin"
         element={
