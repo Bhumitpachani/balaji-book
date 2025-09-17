@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { PWAProvider } from "@/contexts/PWAContext";
+import { PWAInstallPrompt } from "@/components/common/PWAInstallPrompt";
 import { Login } from "./pages/Login";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import { UserDashboard } from "./pages/UserDashboard";
@@ -189,6 +190,7 @@ const App = () => {
             <BrowserRouter>
               <div className="app-shell">
                 <AppRoutes />
+                <PWAInstallPrompt />
               </div>
             </BrowserRouter>
           </PWAProvider>
