@@ -29,7 +29,7 @@ const ProtectedRoute: React.FC<{
 }> = ({ children, allowedRoles }) => {
   const { isAuthenticated, user } = useAuth();
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
@@ -45,7 +45,7 @@ const RootRoute = () => {
   const { isAuthenticated, user } = useAuth();
 
   // If not authenticated, redirect to login
-  if (!isAuthenticated) {
+  if (!isAuthenticated || isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
