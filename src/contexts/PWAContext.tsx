@@ -33,52 +33,47 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
-    // Check if already installed
-    const checkInstallationStatus = () => {
+    const checkIfInstalled = () => {
+      // Check if app is running in standalone mode
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      // Check if app is installed on iOS Safari
       const isInWebAppiOS = (window.navigator as any).standalone === true;
+      // Check localStorage flag
       const isStorageInstalled = localStorage.getItem('balajibook_installed') === 'true';
       
       return isStandalone || isInWebAppiOS || isStorageInstalled;
     };
 
-    setIsInstalled(checkInstallationStatus());
-    
-    // Listen for the beforeinstallprompt event
+    // Set initial installation status
+    setIsInstalled(checkIfInstalled());
+
+    // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       const installEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(installEvent);
       
       // Only show install prompt if not already installed
-      if (!checkInstallationStatus()) {
+      if (!checkIfInstalled()) {
         setIsInstallable(true);
       }
     };
 
-    // Listen for successful app installation
+    // Listen for app installation
     const handleAppInstalled = () => {
       setIsInstalled(true);
       setIsInstallable(false);
+      setDeferredPrompt(null);
       localStorage.setItem('balajibook_installed', 'true');
     };
 
-    // Listen for display mode changes
-    const handleDisplayModeChange = () => {
-      setIsInstalled(checkInstallationStatus());
-    };
-
+    // Add event listeners
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
-    
-    // Listen for display mode changes
-    const mediaQuery = window.matchMedia('(display-mode: standalone)');
-    mediaQuery.addEventListener('change', handleDisplayModeChange);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
-      mediaQuery.removeEventListener('change', handleDisplayModeChange);
     };
   }, []);
 
@@ -91,24 +86,25 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const installApp = async () => {
-    if (deferredPrompt) {
-      try {
-        await deferredPrompt.prompt();
-        const choiceResult = await deferredPrompt.userChoice;
-        
-        if (choiceResult.outcome === 'accepted') {
-          setIsInstalled(true);
-          localStorage.setItem('balajibook_installed', 'true');
-        }
-        
-        setIsInstallable(false);
-        setDeferredPrompt(null);
-      } catch (error) {
-        console.error('Error installing app:', error);
+    if (!deferredPrompt) {
+      // For browsers that don't support the install prompt API
+      setIsInstallable(false);
+      return;
+    }
+
+    try {
+      await deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+      
+      if (choiceResult.outcome === 'accepted') {
+        setIsInstalled(true);
+        localStorage.setItem('balajibook_installed', 'true');
       }
-    } else {
-      // For browsers that don't support the API, just hide the prompt
-      // The user can still install manually through browser menu
+      
+      setIsInstallable(false);
+      setDeferredPrompt(null);
+    } catch (error) {
+      console.error('Error installing app:', error);
       setIsInstallable(false);
     }
   };

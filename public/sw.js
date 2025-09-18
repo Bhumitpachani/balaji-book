@@ -1,4 +1,4 @@
-const CACHE_NAME = 'balajibook-v3';
+const CACHE_NAME = 'balajibook-v4';
 const urlsToCache = [
   '/',
   '/manifest.json',
