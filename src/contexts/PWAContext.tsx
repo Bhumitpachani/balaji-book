@@ -21,28 +21,28 @@ const PWAContext = createContext<PWAContextType | undefined>(undefined);
 
 export const usePWA = () => {
   const context = useContext(PWAContext);
-  console.log('usePWA called, context:', context);
   if (!context) {
-    console.error('PWA context is undefined - component not wrapped in PWAProvider');
     throw new Error('usePWA must be used within a PWAProvider');
   }
   return context;
 };
 
 export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  console.log('PWAProvider rendering');
   const [isInstallable, setIsInstallable] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     // Check if already installed
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isInWebAppiOS = (window.navigator as any).standalone === true;
-    const isStorageInstalled = localStorage.getItem('balajibook_installed') === 'true';
-    
-    const currentlyInstalled = isStandalone || isInWebAppiOS || isStorageInstalled;
-    setIsInstalled(currentlyInstalled);
+    const checkInstallationStatus = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isInWebAppiOS = (window.navigator as any).standalone === true;
+      const isStorageInstalled = localStorage.getItem('balajibook_installed') === 'true';
+      
+      return isStandalone || isInWebAppiOS || isStorageInstalled;
+    };
+
+    setIsInstalled(checkInstallationStatus());
     
     // Listen for the beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -50,19 +50,11 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const installEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(installEvent);
       
-      // Check current installation status at the time of the event
-      const isCurrentlyStandalone = window.matchMedia('(display-mode: standalone)').matches;
-      const isCurrentlyInWebAppiOS = (window.navigator as any).standalone === true;
-      const isCurrentlyStorageInstalled = localStorage.getItem('balajibook_installed') === 'true';
-      
-      const shouldShowPrompt = !isCurrentlyStandalone && !isCurrentlyInWebAppiOS && !isCurrentlyStorageInstalled;
-      
-      // Only show install prompt if we have the native event and not already installed
-      if (shouldShowPrompt) {
+      // Only show install prompt if not already installed
+      if (!checkInstallationStatus()) {
         setIsInstallable(true);
       }
     };
-
 
     // Listen for successful app installation
     const handleAppInstalled = () => {
@@ -71,12 +63,22 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('balajibook_installed', 'true');
     };
 
+    // Listen for display mode changes
+    const handleDisplayModeChange = () => {
+      setIsInstalled(checkInstallationStatus());
+    };
+
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
+    
+    // Listen for display mode changes
+    const mediaQuery = window.matchMedia('(display-mode: standalone)');
+    mediaQuery.addEventListener('change', handleDisplayModeChange);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      mediaQuery.removeEventListener('change', handleDisplayModeChange);
     };
   }, []);
 
