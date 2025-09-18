@@ -39,18 +39,23 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Check if already installed
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const isInWebAppiOS = (window.navigator as any).standalone === true;
-    const isInstalled = localStorage.getItem('balajibook_installed') === 'true';
+    const isStorageInstalled = localStorage.getItem('balajibook_installed') === 'true';
     
-    setIsInstalled(isStandalone || isInWebAppiOS || isInstalled);
-
-    // Show install prompt on every visit if not installed and if we have a deferred prompt
-    const shouldShowPrompt = !isStandalone && !isInWebAppiOS && !isInstalled;
+    const currentlyInstalled = isStandalone || isInWebAppiOS || isStorageInstalled;
+    setIsInstalled(currentlyInstalled);
     
     // Listen for the beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       const installEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(installEvent);
+      
+      // Check current installation status at the time of the event
+      const isCurrentlyStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      const isCurrentlyInWebAppiOS = (window.navigator as any).standalone === true;
+      const isCurrentlyStorageInstalled = localStorage.getItem('balajibook_installed') === 'true';
+      
+      const shouldShowPrompt = !isCurrentlyStandalone && !isCurrentlyInWebAppiOS && !isCurrentlyStorageInstalled;
       
       // Only show install prompt if we have the native event and not already installed
       if (shouldShowPrompt) {
