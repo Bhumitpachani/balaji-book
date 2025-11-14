@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Calendar, Clock, CheckCircle, Search } from "lucide-react";
 import { Link } from "react-router-dom";
-import { apiService, Order } from "@/lib/api";
+import { firebaseService, Order } from "@/lib/firebaseService";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { MobileNavigation } from "@/components/common/MobileNavigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,7 +26,7 @@ export const UserDashboard: React.FC = () => {
     try {
       // For demo purposes, showing all orders for user role
       // In real app, you'd filter by user ID
-      const data = await apiService.getAllOrders();
+      const data = await firebaseService.getAllOrders();
       setOrders(data);
     } catch (error) {
       console.error('Failed to load orders:', error);

@@ -3,11 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ExternalLink, Edit, FileText } from "lucide-react";
-import { apiService, Order } from "@/lib/api";
+import { ArrowLeft, ExternalLink, Edit, FileText, Image as ImageIcon } from "lucide-react";
+import { firebaseService, Order } from "@/lib/firebaseService";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { ImageModal } from "@/components/common/ImageModal";
 
 export const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ export const OrderDetail: React.FC = () => {
   const { toast } = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -25,20 +27,8 @@ export const OrderDetail: React.FC = () => {
 
   const loadOrder = async () => {
     try {
-      // Since the API doesn't have a single order endpoint, we'll search by ID
-      const orders = await apiService.getAllOrders();
-      const foundOrder = orders.find(o => o._id === id);
-      
-      if (foundOrder) {
-        setOrder(foundOrder);
-      } else {
-        toast({
-          title: "Error",
-          description: "Order not found",
-          variant: "destructive",
-        });
-        navigate('/orders');
-      }
+      const foundOrder = await firebaseService.getOrderById(id!);
+      setOrder(foundOrder);
     } catch (error) {
       toast({
         title: "Error",
@@ -55,7 +45,7 @@ export const OrderDetail: React.FC = () => {
     if (!order) return;
     
     try {
-      await apiService.updateOrder(order._id, { status: newStatus });
+      await firebaseService.updateOrder(order.id, { status: newStatus });
       setOrder({ ...order, status: newStatus as any });
       toast({
         title: "Success",
@@ -74,7 +64,7 @@ export const OrderDetail: React.FC = () => {
     if (!order) return;
     
     try {
-      await apiService.updateOrder(order._id, { paymentStatus: newPaymentStatus });
+      await firebaseService.updateOrder(order.id, { paymentStatus: newPaymentStatus });
       setOrder({ ...order, paymentStatus: newPaymentStatus as any });
       toast({
         title: "Success",
@@ -115,7 +105,7 @@ export const OrderDetail: React.FC = () => {
     if (!order) return;
     
     try {
-      await apiService.updateOrder(order._id, { type: newType });
+      await firebaseService.updateOrder(order.id, { type: newType });
       setOrder({ ...order, type: newType as any });
       toast({
         title: "Success",
@@ -170,7 +160,7 @@ export const OrderDetail: React.FC = () => {
           </div>
           {user?.role === 'admin' && (
             <Button asChild size="sm" variant="outline">
-              <Link to={`/orders/${order._id}/edit`}>
+              <Link to={`/orders/${order.id}/edit`}>
                 <Edit className="w-4 h-4 mr-2" />
                 Edit
               </Link>
@@ -186,7 +176,7 @@ export const OrderDetail: React.FC = () => {
             <div className="flex items-start justify-between">
               <div>
                 <CardTitle className="text-lg text-foreground">
-                  {typeof order.clientId === 'object' && order.clientId ? order.clientId.name : 'Unknown Client'}
+                  {order.clientName || 'Unknown Client'}
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">Order #{order.number}</p>
               </div>
@@ -220,16 +210,20 @@ export const OrderDetail: React.FC = () => {
                 <StatusBadge status={order.paymentStatus} type="payment" />
               </div>
               
-              {order.url && (
-                <div className="flex justify-between py-2">
-                  <span className="text-sm text-muted-foreground">Attached File</span>
-                  <Button asChild size="sm" variant="outline" className="h-8">
-                    <a href={order.url} target="_blank" rel="noopener noreferrer">
-                      <FileText className="w-4 h-4 mr-2" />
-                      View File
-                      <ExternalLink className="w-3 h-3 ml-1" />
-                    </a>
-                  </Button>
+              {order.imageUrls && order.imageUrls.length > 0 && (
+                <div className="py-2">
+                  <span className="text-sm text-muted-foreground mb-2 block">Images</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {order.imageUrls.map((url, index) => (
+                      <img 
+                        key={index}
+                        src={url} 
+                        alt={`Order ${index + 1}`}
+                        className="w-full h-20 object-cover rounded cursor-pointer"
+                        onClick={() => setSelectedImageIndex(index)}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -282,6 +276,19 @@ export const OrderDetail: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Image Modal */}
+      {selectedImageIndex !== null && order?.imageUrls && (
+        <ImageModal
+          isOpen={true}
+          onClose={() => setSelectedImageIndex(null)}
+          imageUrl={order.imageUrls[selectedImageIndex]}
+          imageIndex={selectedImageIndex}
+          totalImages={order.imageUrls.length}
+          onNext={() => setSelectedImageIndex((selectedImageIndex + 1) % order.imageUrls.length)}
+          onPrev={() => setSelectedImageIndex((selectedImageIndex - 1 + order.imageUrls.length) % order.imageUrls.length)}
+        />
+      )}
     </div>
   );
 };

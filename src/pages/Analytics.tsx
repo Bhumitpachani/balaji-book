@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { TrendingUp, FileText, DollarSign, Package } from "lucide-react";
-import { apiService, Order } from "@/lib/api";
+import { firebaseService, Order } from "@/lib/firebaseService";
 import { MobileNavigation } from "@/components/common/MobileNavigation";
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--muted))', 'hsl(var(--destructive))'];
@@ -17,7 +17,7 @@ export const Analytics: React.FC = () => {
 
   const loadOrders = async () => {
     try {
-      const data = await apiService.getAllOrders();
+      const data = await firebaseService.getAllOrders();
       setOrders(data);
     } catch (error) {
       console.error('Failed to load orders:', error);
