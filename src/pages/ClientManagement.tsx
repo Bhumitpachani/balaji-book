@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Eye, Edit, Trash2, MapPin, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
-import { apiService, Client } from "@/lib/api";
+import { firebaseService, Client } from "@/lib/firebaseService";
 import { MobileNavigation } from "@/components/common/MobileNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +23,7 @@ export const ClientManagement: React.FC = () => {
 
   const loadClients = async () => {
     try {
-      const data = await apiService.getAllClients();
+      const data = await firebaseService.getAllClients();
       setClients(data);
     } catch (error) {
       toast({
@@ -40,8 +40,8 @@ export const ClientManagement: React.FC = () => {
     if (!confirm('Are you sure you want to delete this client?')) return;
     
     try {
-      await apiService.deleteClient(clientId);
-      setClients(clients.filter(client => client._id !== clientId));
+      await firebaseService.deleteClient(clientId);
+      setClients(clients.filter(client => client.id !== clientId));
       toast({
         title: "Success",
         description: "Client deleted successfully",

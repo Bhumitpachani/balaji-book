@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { apiService, Order } from '@/lib/api';
+import { firebaseService, Order } from '@/lib/firebaseService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,7 +40,7 @@ export const AdminOrdersTable: React.FC = () => {
   const loadOrders = async () => {
     try {
       setIsLoading(true);
-      const fetchedOrders = await apiService.getAllOrders();
+      const fetchedOrders = await firebaseService.getAllOrders();
       setOrders(fetchedOrders);
     } catch (error) {
       console.error('Error loading orders:', error);

@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Plus, FileText, TrendingUp, DollarSign, Clock, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
-import { apiService, Order } from "@/lib/api";
+import { firebaseService, Order } from "@/lib/firebaseService";
 import { MobileNavigation } from "@/components/common/MobileNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { PWAInstallPrompt } from "@/components/common/PWAInstallPrompt";
@@ -19,7 +19,7 @@ export const AdminDashboard: React.FC = () => {
 
   const loadOrders = async () => {
     try {
-      const data = await apiService.getAllOrders();
+      const data = await firebaseService.getAllOrders();
       setOrders(data);
     } catch (error) {
       console.error('Failed to load orders:', error);

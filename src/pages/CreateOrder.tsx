@@ -8,14 +8,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Upload, X, Search, User, Loader2 } from "lucide-react";
-import { apiService, Client } from "@/lib/api";
+import { firebaseService, Client } from "@/lib/firebaseService";
 import { useToast } from "@/hooks/use-toast";
 
 export const CreateOrder: React.FC = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientSearch, setClientSearch] = useState('');
@@ -51,7 +51,7 @@ export const CreateOrder: React.FC = () => {
 
   const loadClients = async () => {
     try {
-      const data = await apiService.getAllClients();
+      const data = await firebaseService.getAllClients();
       setClients(data);
     } catch (error) {
       toast({
@@ -67,14 +67,14 @@ export const CreateOrder: React.FC = () => {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+    const files = e.target.files;
+    if (files) {
+      setSelectedFiles(prev => [...prev, ...Array.from(files)]);
     }
   };
 
-  const removeFile = () => {
-    setSelectedFile(null);
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const filteredClients = clients.filter(client => 
@@ -105,16 +105,16 @@ export const CreateOrder: React.FC = () => {
     try {
       const orderData = {
         ...formData,
-        orderName: selectedClient.name, // Use client name as order name
-        clientId: selectedClient._id,
+        orderName: selectedClient.name,
+        clientId: selectedClient.id,
         clientName: selectedClient.name,
         clientMobileNumber: selectedClient.mobileNumber,
         clientAddress: selectedClient.address,
         clientCity: selectedClient.city,
-        ...(selectedFile && { file: selectedFile })
+        files: selectedFiles.length > 0 ? selectedFiles : undefined
       };
 
-      await apiService.createOrder(orderData);
+      await firebaseService.createOrder(orderData);
       
       toast({
         title: "Success",
@@ -176,7 +176,7 @@ export const CreateOrder: React.FC = () => {
                     <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
                       {filteredClients.map((client) => (
                         <div
-                          key={client._id}
+                          key={client.id}
                           onClick={() => selectClient(client)}
                           className="px-3 py-2 hover:bg-muted cursor-pointer border-b border-border last:border-b-0"
                         >
@@ -334,49 +334,55 @@ export const CreateOrder: React.FC = () => {
 
               {/* File Upload */}
               <div className="space-y-2">
-                <Label>File Upload</Label>
+                <Label>File Upload (Multiple Images)</Label>
                 <div className="border-2 border-dashed border-border rounded-lg p-4 relative">
-                  {!selectedFile ? (
-                    <div className="text-center">
-                      <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        PDF, Excel, or Image files
-                      </p>
-                      <input
-                        type="file"
-                        accept=".pdf,.xlsx,.xls,.jpg,.jpeg,.png"
-                        onChange={handleFileChange}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center">
-                          <Upload className="w-4 h-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium">{selectedFile.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={removeFile}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  )}
+                  <div className="text-center">
+                    <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Click to upload or drag and drop
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      JPG, JPEG, PNG - Multiple images allowed
+                    </p>
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png"
+                      multiple
+                      onChange={handleFileChange}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </div>
                 </div>
+                
+                {/* Selected Files Preview */}
+                {selectedFiles.length > 0 && (
+                  <div className="space-y-2 mt-2">
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between bg-muted/50 p-2 rounded">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-primary/10 rounded flex items-center justify-center">
+                            <Upload className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Submit Button */}

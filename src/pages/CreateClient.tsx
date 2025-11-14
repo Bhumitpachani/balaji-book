@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import { apiService, CreateClientData } from "@/lib/api";
+import { firebaseService, CreateClientData } from "@/lib/firebaseService";
 import { useToast } from "@/hooks/use-toast";
 
 export const CreateClient: React.FC = () => {
@@ -41,7 +41,7 @@ export const CreateClient: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await apiService.createClient(formData);
+      await firebaseService.createClient(formData);
       toast({
         title: "Success",
         description: "Client created successfully",

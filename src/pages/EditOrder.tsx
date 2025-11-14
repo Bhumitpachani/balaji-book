@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Upload, X, Search, User, Loader2 } from "lucide-react";
-import { apiService, Client, Order } from "@/lib/api";
+import { firebaseService, Client, Order } from "@/lib/firebaseService";
 import { useToast } from "@/hooks/use-toast";
 
 export const EditOrder: React.FC = () => {
@@ -17,7 +17,7 @@ export const EditOrder: React.FC = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingOrder, setIsLoadingOrder] = useState(true);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [clientSearch, setClientSearch] = useState('');
@@ -46,8 +46,7 @@ export const EditOrder: React.FC = () => {
 
   const loadOrder = async () => {
     try {
-      const orders = await apiService.getAllOrders();
-      const foundOrder = orders.find(o => o._id === id);
+      const foundOrder = await firebaseService.getOrderById(id!);
       
       if (foundOrder) {
         setOrder(foundOrder);
@@ -64,9 +63,8 @@ export const EditOrder: React.FC = () => {
           receivedPayment: foundOrder.receivedPayment,
         });
         
-        // Find and set the client
-        const allClients = await apiService.getAllClients();
-        const orderClient = allClients.find(c => c._id === foundOrder.clientId);
+        const allClients = await firebaseService.getAllClients();
+        const orderClient = allClients.find(c => c.id === foundOrder.clientId);
         if (orderClient) {
           setSelectedClient(orderClient);
           setClientSearch(orderClient.name);
@@ -93,7 +91,7 @@ export const EditOrder: React.FC = () => {
 
   const loadClients = async () => {
     try {
-      const data = await apiService.getAllClients();
+      const data = await firebaseService.getAllClients();
       setClients(data);
     } catch (error) {
       console.error('Failed to load clients:', error);
@@ -110,16 +108,14 @@ export const EditOrder: React.FC = () => {
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+    const files = event.target.files;
+    if (files) {
+      setSelectedFiles(prev => [...prev, ...Array.from(files)]);
     }
   };
 
-  const removeFile = () => {
-    setSelectedFile(null);
-    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleClientSelect = (client: Client) => {
@@ -153,18 +149,18 @@ export const EditOrder: React.FC = () => {
       const orderData: any = {
         ...formData,
         number: orderNumber,
-        clientId: selectedClient._id,
+        clientId: selectedClient.id,
         clientName: selectedClient.name,
         clientMobileNumber: selectedClient.mobileNumber,
         clientAddress: selectedClient.address,
         clientCity: selectedClient.city,
       };
 
-      if (selectedFile) {
-        orderData.file = selectedFile;
+      if (selectedFiles.length > 0) {
+        orderData.files = selectedFiles;
       }
 
-      await apiService.updateOrder(order._id, orderData);
+      await firebaseService.updateOrder(order.id, orderData);
 
       toast({
         title: "Success",
@@ -264,7 +260,7 @@ export const EditOrder: React.FC = () => {
                     <div className="absolute top-full left-0 right-0 z-50 bg-card border border-border rounded-md shadow-lg mt-1 max-h-48 overflow-y-auto">
                       {filteredClients.map((client) => (
                         <div
-                          key={client._id}
+                          key={client.id}
                           onClick={() => handleClientSelect(client)}
                           className="p-3 hover:bg-muted cursor-pointer border-b border-border last:border-b-0"
                         >
@@ -438,7 +434,7 @@ export const EditOrder: React.FC = () => {
 
               {/* File Upload */}
               <div className="space-y-2">
-                <Label htmlFor="file-upload">Attach File (Optional)</Label>
+                <Label htmlFor="file-upload">Images (Multiple Upload)</Label>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <Button
@@ -448,47 +444,55 @@ export const EditOrder: React.FC = () => {
                       className="flex items-center gap-2"
                     >
                       <Upload className="w-4 h-4" />
-                      Choose File
+                      Add Images
                     </Button>
                     <input
                       id="file-upload"
                       type="file"
                       onChange={handleFileChange}
                       className="hidden"
-                      accept="image/*,.pdf,.doc,.docx"
+                      accept="image/*"
+                      multiple
                     />
-                    <span className="text-sm text-muted-foreground">
-                      {selectedFile ? selectedFile.name : (order?.url ? 'Current file attached' : 'No file selected')}
-                    </span>
                   </div>
                   
-                  {selectedFile && (
-                    <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                      <span className="text-sm">{selectedFile.name}</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={removeFile}
-                        className="h-6 w-6 p-0"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                  {/* Current Images */}
+                  {order?.imageUrls && order.imageUrls.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">Current Images</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {order.imageUrls.map((url, index) => (
+                          <div key={index} className="relative">
+                            <img 
+                              src={url} 
+                              alt={`Order image ${index + 1}`}
+                              className="w-full h-24 object-cover rounded-lg cursor-pointer"
+                              onClick={() => window.open(url, '_blank')}
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   
-                  {order?.url && !selectedFile && (
-                    <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                      <span className="text-sm">Current file attached</span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => window.open(order.url, '_blank')}
-                        className="h-6 text-xs px-2"
-                      >
-                        View
-                      </Button>
+                  {/* New Files to Upload */}
+                  {selectedFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">New Images to Upload</Label>
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                          <span className="text-sm flex-1">{file.name}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeFile(index)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

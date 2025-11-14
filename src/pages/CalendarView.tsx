@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
-import { apiService, Order } from "@/lib/api";
+import { firebaseService, Order } from "@/lib/firebaseService";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { MobileNavigation } from "@/components/common/MobileNavigation";
 
@@ -19,7 +19,7 @@ export const CalendarView: React.FC = () => {
 
   const loadOrders = async () => {
     try {
-      const data = await apiService.getAllOrders();
+      const data = await firebaseService.getAllOrders();
       setOrders(data);
     } catch (error) {
       console.error('Failed to load orders:', error);

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Eye, User, Phone, MapPin, Search, Filter } from "lucide-react";
-import { apiService, Client, Order } from "@/lib/api";
+import { firebaseService, Client, Order } from "@/lib/firebaseService";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
 
@@ -31,7 +31,7 @@ export const ClientOrders: React.FC = () => {
     if (!id) return;
     
     try {
-      const data = await apiService.getClientById(id);
+      const data = await firebaseService.getClientById(id);
       setClient(data.client);
       setOrders(data.orders);
       setFilteredOrders(data.orders);
@@ -175,14 +175,14 @@ export const ClientOrders: React.FC = () => {
             </Card>
           ) : (
             filteredOrders.map((order) => (
-              <Card key={order._id} className="shadow-card hover:shadow-card-hover transition-shadow">
+              <Card key={order.id} className="shadow-card hover:shadow-card-hover transition-shadow">
                 <CardContent className="p-4">
                   <div className="space-y-3">
                     {/* Header */}
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <h4 className="font-semibold text-foreground truncate">{order.orderName}</h4>
-                        <p className="text-sm text-muted-foreground">#{order._id}</p>
+                        <p className="text-sm text-muted-foreground">#{order.id}</p>
                       </div>
                       <div className="flex gap-2">
                         <StatusBadge status={order.status} />
@@ -215,7 +215,7 @@ export const ClientOrders: React.FC = () => {
                     {/* Action */}
                     <div className="pt-3 border-t border-border">
                       <Button asChild size="sm" variant="outline" className="w-full">
-                        <Link to={`/orders/${order._id}`}>
+                        <Link to={`/orders/${order.id}`}>
                           <Eye className="w-4 h-4 mr-2" />
                           View Details
                         </Link>
