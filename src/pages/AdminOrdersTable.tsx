@@ -122,7 +122,7 @@ export const AdminOrdersTable: React.FC = () => {
         'Status': order.status,
         'Payment Status': order.paymentStatus,
         'Type': order.type,
-        'File Path': order.url ? `uploaded_files/${order.orderName.replace(/[^a-zA-Z0-9]/g, '_')}_${order._id.slice(-6)}.${order.url.split('.').pop() || 'bin'}` : 'No file'
+        'File Path': order.imageUrls && order.imageUrls.length > 0 ? `uploaded_files/${order.orderName.replace(/[^a-zA-Z0-9]/g, '_')}_${order.id.slice(-6)}.jpg` : 'No file'
       }));
 
       // Create Excel workbook
@@ -143,15 +143,17 @@ export const AdminOrdersTable: React.FC = () => {
       // Download and add uploaded files
       let fileCount = 0;
       for (const order of filteredOrders) {
-        if (order.url) {
-          toast.info(`Downloading files... (${++fileCount}/${filteredOrders.filter(o => o.url).length})`);
-          const fileBlob = await downloadFile(order.url, `${order.orderName}_file`);
-          if (fileBlob && filesFolder) {
-            // Extract file extension from URL or use generic extension
-            const urlParts = order.url.split('.');
-            const extension = urlParts.length > 1 ? urlParts.pop() : 'bin';
-            const filename = `${order.orderName.replace(/[^a-zA-Z0-9]/g, '_')}_${order._id.slice(-6)}.${extension}`;
-            filesFolder.file(filename, fileBlob);
+        if (order.imageUrls && order.imageUrls.length > 0) {
+          for (let i = 0; i < order.imageUrls.length; i++) {
+            const imageUrl = order.imageUrls[i];
+            toast.info(`Downloading files... (${++fileCount})`);
+            const fileBlob = await downloadFile(imageUrl, `${order.orderName}_image_${i + 1}`);
+            if (fileBlob && filesFolder) {
+              const urlParts = imageUrl.split('.');
+              const extension = urlParts.length > 1 ? urlParts.pop() : 'jpg';
+              const filename = `${order.orderName.replace(/[^a-zA-Z0-9]/g, '_')}_${order.id.slice(-6)}_${i + 1}.${extension}`;
+              filesFolder.file(filename, fileBlob);
+            }
           }
         }
       }
@@ -278,9 +280,9 @@ export const AdminOrdersTable: React.FC = () => {
                 </TableHeader>
                 <TableBody>
                   {currentOrders.map((order) => (
-                    <TableRow key={order._id}>
+                    <TableRow key={order.id}>
                       <TableCell className="font-medium">
-                        <Link to={`/orders/${order._id}`} className="hover:text-primary">
+                        <Link to={`/orders/${order.id}`} className="hover:text-primary">
                           {order.clientName || 'N/A'}
                         </Link>
                       </TableCell>
@@ -300,9 +302,9 @@ export const AdminOrdersTable: React.FC = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {order.url ? (
+                        {order.imageUrls && order.imageUrls.length > 0 ? (
                           <a 
-                            href={order.url} 
+                            href={order.imageUrls[0]} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-primary hover:text-primary/80"
@@ -332,11 +334,11 @@ export const AdminOrdersTable: React.FC = () => {
         {/* Mobile Cards View */}
         <div className="md:hidden space-y-4">
           {currentOrders.map((order) => (
-            <Card key={order._id}>
+            <Card key={order.id}>
               <CardContent className="p-4">
                 <div className="space-y-3">
                   <div className="flex justify-between items-start">
-                    <Link to={`/orders/${order._id}`} className="font-medium text-primary hover:text-primary/80">
+                    <Link to={`/orders/${order.id}`} className="font-medium text-primary hover:text-primary/80">
                       {order.clientName || 'N/A'}
                     </Link>
                     <div className="flex flex-col gap-1 items-end">
@@ -388,10 +390,10 @@ export const AdminOrdersTable: React.FC = () => {
                     </div>
                   </div>
 
-                  {order.url && (
+                  {order.imageUrls && order.imageUrls.length > 0 && (
                     <div className="flex justify-end">
                       <a 
-                        href={order.url} 
+                        href={order.imageUrls[0]} 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 text-primary hover:text-primary/80 text-sm"

@@ -189,7 +189,7 @@ export const UserDashboard: React.FC = () => {
               <p className="text-muted-foreground text-center py-4">No orders found</p>
             ) : (
               recentOrders.map((order) => (
-                <div key={order._id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                <div key={order.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{order.orderName}</p>
                     <p className="text-sm text-muted-foreground">#{order.number}</p>

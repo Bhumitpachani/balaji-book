@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Filter, Eye, Edit, Trash2, ExternalLink, DollarSign, User } from "lucide-react";
 import { Link } from "react-router-dom";
-import { apiService, Order, Client } from "@/lib/api";
+import { firebaseService, Order, Client } from "@/lib/firebaseService";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { PaymentModal } from "@/components/common/PaymentModal";
 import { MobileNavigation } from "@/components/common/MobileNavigation";
@@ -33,9 +33,9 @@ export const OrdersList: React.FC = () => {
 
   const loadOrders = async () => {
     try {
-      const data = await apiService.getAllOrders();
+      const data = await firebaseService.getAllOrders();
       // Filter out any invalid orders
-      const validOrders = data.filter(order => order && order._id);
+      const validOrders = data.filter(order => order && order.id);
       setOrders(validOrders);
     } catch (error) {
       toast({
@@ -54,8 +54,8 @@ export const OrdersList: React.FC = () => {
     }
 
     try {
-      await apiService.deleteOrder(orderId);
-      setOrders(orders.filter(order => order._id !== orderId));
+      await firebaseService.deleteOrder(orderId);
+      setOrders(orders.filter(order => order.id !== orderId));
       toast({
         title: "Success",
         description: "Order deleted successfully",
@@ -73,9 +73,9 @@ export const OrdersList: React.FC = () => {
     try {
       if (order.type === 'Inquiry' && order.status === 'Pending') {
         // Convert inquiry to confirm order
-        await apiService.updateOrder(order._id, { type: 'Confirm' });
+        await firebaseService.updateOrder(order.id, { type: 'Confirm' });
         setOrders(orders.map(o => 
-          o._id === order._id ? { ...o, type: 'Confirm' as any } : o
+          o.id === order.id ? { ...o, type: 'Confirm' as any } : o
         ));
         toast({
           title: "Success",
@@ -84,9 +84,9 @@ export const OrdersList: React.FC = () => {
       } else {
         const nextStatus = getNextStatus(order.status, order.type);
         if (nextStatus) {
-          await apiService.updateOrder(order._id, { status: nextStatus });
+          await firebaseService.updateOrder(order.id, { status: nextStatus });
           setOrders(orders.map(o => 
-            o._id === order._id ? { ...o, status: nextStatus as any } : o
+            o.id === order.id ? { ...o, status: nextStatus as any } : o
           ));
           toast({
             title: "Success",
@@ -122,16 +122,16 @@ export const OrdersList: React.FC = () => {
       const isFullPayment = newReceivedAmount >= selectedOrder.totalAmount;
       
       // Update payment in backend
-      await apiService.collectPayment(selectedOrder._id, newReceivedAmount);
+      await firebaseService.collectPayment(selectedOrder.id, newReceivedAmount);
       
       // If full payment, also update payment status
       if (isFullPayment) {
-        await apiService.updateOrder(selectedOrder._id, { paymentStatus: 'Paid' });
+        await firebaseService.updateOrder(selectedOrder.id, { paymentStatus: 'Paid' });
       }
       
       // Update the order in the list
       setOrders(orders.map(order => 
-        order._id === selectedOrder._id 
+        order.id === selectedOrder.id
           ? { 
               ...order, 
               receivedPayment: newReceivedAmount,
@@ -164,8 +164,8 @@ export const OrdersList: React.FC = () => {
       return false;
     }
     
-    const clientName = typeof order.clientId === 'object' && order.clientId ? order.clientId.name : '';
-    const clientMobile = typeof order.clientId === 'object' && order.clientId ? order.clientId.mobileNumber : '';
+    const clientName = order.clientName || '';
+    const clientMobile = order.clientMobileNumber || '';
     
     const matchesSearch = (order.orderName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (order.number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -305,7 +305,7 @@ export const OrdersList: React.FC = () => {
             </Card>
           ) : (
             filteredOrders.map((order) => (
-              <Card key={order._id} className="shadow-card hover:shadow-lg transition-shadow">
+              <Card key={order.id} className="shadow-card hover:shadow-lg transition-shadow">
                 <CardContent className="p-4">
                   <div className="space-y-4">
                     {/* Header */}
@@ -314,7 +314,7 @@ export const OrdersList: React.FC = () => {
                         <h3 className="font-semibold text-foreground text-lg truncate">
                           {order.orderName}
                         </h3>
-                        <p className="text-sm text-muted-foreground">#{order._id || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground">#{order.id || 'N/A'}</p>
                       </div>
                       <div className="flex gap-2">
                         <StatusBadge status={order.status} />
@@ -414,7 +414,7 @@ export const OrdersList: React.FC = () => {
                     <div className="space-y-2">
                       <div className="flex gap-2">
                         <Button asChild size="sm" variant="outline" className="flex-1">
-                          <Link to={`/orders/${order._id}`}>
+                          <Link to={`/orders/${order.id}`}>
                             <Eye className="w-4 h-4 mr-2" />
                             View Details
                           </Link>
@@ -422,7 +422,7 @@ export const OrdersList: React.FC = () => {
                         
                         {user?.role === 'admin' && (
                           <Button asChild size="sm" variant="outline">
-                            <Link to={`/orders/${order._id}/edit`}>
+                            <Link to={`/orders/${order.id}/edit`}>
                               <Edit className="w-4 h-4" />
                             </Link>
                           </Button>
@@ -447,7 +447,7 @@ export const OrdersList: React.FC = () => {
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => handleDeleteOrder(order._id)}
+                          onClick={() => handleDeleteOrder(order.id)}
                           className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
