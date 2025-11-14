@@ -111,7 +111,7 @@ export const ClientManagement: React.FC = () => {
             </Card>
           ) : (
             filteredClients.map((client) => (
-              <Card key={client._id} className="shadow-card hover:shadow-card-hover transition-shadow">
+              <Card key={client.id} className="shadow-card hover:shadow-card-hover transition-shadow">
                 <CardContent className="p-4">
                   <div className="space-y-3">
                     {/* Header */}
@@ -141,7 +141,7 @@ export const ClientManagement: React.FC = () => {
                     <div className="flex items-center justify-between pt-3 border-t border-border">
                       <div className="flex gap-2">
                         <Button asChild size="sm" variant="outline" className="px-3">
-                          <Link to={`/clients/${client._id}/orders`}>
+                          <Link to={`/clients/${client.id}/orders`}>
                             <Eye className="w-4 h-4 mr-1" />
                             Orders
                           </Link>
@@ -151,14 +151,14 @@ export const ClientManagement: React.FC = () => {
                       {user?.role === 'admin' && (
                         <div className="flex gap-1">
                           <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
-                            <Link to={`/clients/${client._id}/edit`}>
+                            <Link to={`/clients/${client.id}/edit`}>
                               <Edit className="w-4 h-4" />
                             </Link>
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleDelete(client._id)}
+                            onClick={() => handleDelete(client.id)}
                             className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             <Trash2 className="w-4 h-4" />

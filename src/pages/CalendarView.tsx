@@ -187,7 +187,7 @@ export const CalendarView: React.FC = () => {
               ) : (
                 <div className="space-y-3">
                   {selectedDateOrders.map((order) => (
-                    <div key={order._id} className="p-3 bg-muted/30 rounded-lg">
+                    <div key={order.id} className="p-3 bg-muted/30 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-medium">{order.orderName}</h4>
                         <StatusBadge status={order.status} />
