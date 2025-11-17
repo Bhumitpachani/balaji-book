@@ -3,12 +3,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ExternalLink, Edit, FileText, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, ExternalLink, Edit, Download } from "lucide-react";
 import { firebaseService, Order } from "@/lib/firebaseService";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { ImageModal } from "@/components/common/ImageModal";
+import { getFileType, getFileIcon, getFileName } from "@/lib/fileUtils";
 
 export const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -211,19 +212,57 @@ export const OrderDetail: React.FC = () => {
               </div>
               
               {order.imageUrls && order.imageUrls.length > 0 && (
-                <div className="py-2">
-                  <span className="text-sm text-muted-foreground mb-2 block">Images</span>
-                  <div className="grid grid-cols-3 gap-2">
-                    {order.imageUrls.map((url, index) => (
-                      <img 
-                        key={index}
-                        src={url} 
-                        alt={`Order ${index + 1}`}
-                        className="w-full h-20 object-cover rounded cursor-pointer"
-                        onClick={() => setSelectedImageIndex(index)}
-                      />
-                    ))}
-                  </div>
+                <div className="py-2 space-y-3">
+                  {/* Images Section */}
+                  {order.imageUrls.filter(url => getFileType(url) === 'image').length > 0 && (
+                    <div>
+                      <span className="text-sm text-muted-foreground mb-2 block">Images</span>
+                      <div className="grid grid-cols-3 gap-2">
+                        {order.imageUrls
+                          .map((url, originalIndex) => ({ url, originalIndex }))
+                          .filter(({ url }) => getFileType(url) === 'image')
+                          .map(({ url, originalIndex }) => (
+                            <img 
+                              key={originalIndex}
+                              src={url} 
+                              alt={`Order ${originalIndex + 1}`}
+                              className="w-full h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
+                              onClick={() => setSelectedImageIndex(originalIndex)}
+                            />
+                          ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Other Files Section */}
+                  {order.imageUrls.filter(url => getFileType(url) !== 'image').length > 0 && (
+                    <div>
+                      <span className="text-sm text-muted-foreground mb-2 block">Documents</span>
+                      <div className="space-y-2">
+                        {order.imageUrls
+                          .filter(url => getFileType(url) !== 'image')
+                          .map((url, index) => {
+                            const fileType = getFileType(url);
+                            const Icon = getFileIcon(fileType);
+                            const fileName = getFileName(url);
+                            
+                            return (
+                              <a
+                                key={index}
+                                href={url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors"
+                              >
+                                <Icon className="w-5 h-5 text-primary flex-shrink-0" />
+                                <span className="text-sm text-foreground flex-1 truncate">{fileName}</span>
+                                <Download className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              </a>
+                            );
+                          })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -278,17 +317,41 @@ export const OrderDetail: React.FC = () => {
       </div>
 
       {/* Image Modal */}
-      {selectedImageIndex !== null && order?.imageUrls && (
-        <ImageModal
-          isOpen={true}
-          onClose={() => setSelectedImageIndex(null)}
-          imageUrl={order.imageUrls[selectedImageIndex]}
-          imageIndex={selectedImageIndex}
-          totalImages={order.imageUrls.length}
-          onNext={() => setSelectedImageIndex((selectedImageIndex + 1) % order.imageUrls.length)}
-          onPrev={() => setSelectedImageIndex((selectedImageIndex - 1 + order.imageUrls.length) % order.imageUrls.length)}
-        />
-      )}
+      {selectedImageIndex !== null && order?.imageUrls && (() => {
+        const imageUrls = order.imageUrls.filter(url => getFileType(url) === 'image');
+        const currentImageIndex = imageUrls.findIndex((_, idx) => {
+          const originalIndices = order.imageUrls
+            .map((url, originalIdx) => ({ url, originalIdx }))
+            .filter(({ url }) => getFileType(url) === 'image');
+          return originalIndices[idx]?.originalIdx === selectedImageIndex;
+        });
+        
+        if (currentImageIndex === -1 || imageUrls.length === 0) return null;
+        
+        return (
+          <ImageModal
+            isOpen={true}
+            onClose={() => setSelectedImageIndex(null)}
+            imageUrl={imageUrls[currentImageIndex]}
+            imageIndex={currentImageIndex}
+            totalImages={imageUrls.length}
+            onNext={() => {
+              const nextImageIndex = (currentImageIndex + 1) % imageUrls.length;
+              const originalIndices = order.imageUrls
+                .map((url, originalIdx) => ({ url, originalIdx }))
+                .filter(({ url }) => getFileType(url) === 'image');
+              setSelectedImageIndex(originalIndices[nextImageIndex]?.originalIdx || 0);
+            }}
+            onPrev={() => {
+              const prevImageIndex = (currentImageIndex - 1 + imageUrls.length) % imageUrls.length;
+              const originalIndices = order.imageUrls
+                .map((url, originalIdx) => ({ url, originalIdx }))
+                .filter(({ url }) => getFileType(url) === 'image');
+              setSelectedImageIndex(originalIndices[prevImageIndex]?.originalIdx || 0);
+            }}
+          />
+        );
+      })()}
     </div>
   );
 };

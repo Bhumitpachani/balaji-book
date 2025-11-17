@@ -434,7 +434,7 @@ export const EditOrder: React.FC = () => {
 
               {/* File Upload */}
               <div className="space-y-2">
-                <Label htmlFor="file-upload">Images (Multiple Upload)</Label>
+                <Label htmlFor="file-upload">Files (Multiple Upload)</Label>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <Button
@@ -444,28 +444,27 @@ export const EditOrder: React.FC = () => {
                       className="flex items-center gap-2"
                     >
                       <Upload className="w-4 h-4" />
-                      Add Images
+                      Add Files
                     </Button>
                     <input
                       id="file-upload"
                       type="file"
                       onChange={handleFileChange}
                       className="hidden"
-                      accept="image/*"
                       multiple
                     />
                   </div>
                   
-                  {/* Current Images */}
+                  {/* Current Files */}
                   {order?.imageUrls && order.imageUrls.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="text-sm text-muted-foreground">Current Images</Label>
+                      <Label className="text-sm text-muted-foreground">Current Files</Label>
                       <div className="grid grid-cols-2 gap-2">
                         {order.imageUrls.map((url, index) => (
                           <div key={index} className="relative">
                             <img 
                               src={url} 
-                              alt={`Order image ${index + 1}`}
+                              alt={`Order file ${index + 1}`}
                               className="w-full h-24 object-cover rounded-lg cursor-pointer"
                               onClick={() => window.open(url, '_blank')}
                             />

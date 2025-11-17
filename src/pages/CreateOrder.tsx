@@ -334,7 +334,7 @@ export const CreateOrder: React.FC = () => {
 
               {/* File Upload */}
               <div className="space-y-2">
-                <Label>File Upload (Multiple Images)</Label>
+                <Label>File Upload (Multiple Files)</Label>
                 <div className="border-2 border-dashed border-border rounded-lg p-4 relative">
                   <div className="text-center">
                     <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
@@ -342,11 +342,10 @@ export const CreateOrder: React.FC = () => {
                       Click to upload or drag and drop
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      JPG, JPEG, PNG - Multiple images allowed
+                      Images, PDF, Excel, and other documents - Multiple files allowed
                     </p>
                     <input
                       type="file"
-                      accept=".jpg,.jpeg,.png"
                       multiple
                       onChange={handleFileChange}
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
