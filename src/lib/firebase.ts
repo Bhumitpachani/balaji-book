@@ -3,13 +3,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-apiKey: "AIzaSyBSfHugjPJ52QBQSuHWt9iGBFhq6wBoh5g",
-  authDomain: "hotel-7ac9f.firebaseapp.com",
-  projectId: "hotel-7ac9f",
-  storageBucket: "hotel-7ac9f.appspot.com",
-  messagingSenderId: "102297833385",
-  appId: "1:102297833385:web:f5605f4331c2b5f7173eb8",
-  measurementId: "G-1TZYLRZXES"
+apiKey: "AIzaSyCLwn48koGG36jAjS-Ps_YoU4FVVpBj5LA",
+  authDomain: "balaji-eng.firebaseapp.com",
+  projectId: "balaji-eng",
+  storageBucket: "balaji-eng.firebasestorage.app",
+  messagingSenderId: "482598975172",
+  appId: "1:482598975172:web:1ff5ac7391cd402ed83b91",
+  measurementId: "G-TWZ6B6Z5EQ"
 };
 
 export const app = initializeApp(firebaseConfig);
