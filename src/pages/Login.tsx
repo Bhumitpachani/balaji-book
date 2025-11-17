@@ -102,14 +102,14 @@ export const Login: React.FC = () => {
                 {isLoading ? 'Signing in...' : 'Sign in'}
               </Button>
             </form>
-
+{/* 
             <div className="mt-6 p-4 bg-muted rounded-lg">
               <h4 className="font-medium text-sm mb-2">Demo Credentials:</h4>
               <div className="text-sm text-muted-foreground space-y-1">
                 <div>Admin: username "admin", password "123"</div>
                 <div>User: username "user", password "123"</div>
               </div>
-            </div>
+            </div> */}
           </CardContent>
         </Card>
       </div>
