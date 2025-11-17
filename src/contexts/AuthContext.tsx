@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = (username: string, password: string): boolean => {
     // Hardcoded credentials
-    if ((username === 'admin' && password === '123') || (username === 'user' && password === '123')) {
+    if ((username === 'balaji' && password === '9978753398') || (username === 'user' && password === '9978753398')) {
       const userData: User = {
         username,
         role: username as 'admin' | 'user'
