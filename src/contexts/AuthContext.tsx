@@ -5,6 +5,11 @@ interface User {
   role: 'admin' | 'user';
 }
 
+interface StoredAuth {
+  user: User;
+  timestamp: number;
+}
+
 interface AuthContextType {
   user: User | null;
   login: (username: string, password: string) => boolean;
@@ -27,9 +32,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Check for saved auth state
-    const savedUser = localStorage.getItem('balajibook_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+    const savedAuth = localStorage.getItem('balajibook_user');
+    if (savedAuth) {
+      try {
+        const authData: StoredAuth = JSON.parse(savedAuth);
+        const currentTime = new Date().getTime();
+        const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        
+        // Check if session has expired (more than 24 hours)
+        if (currentTime - authData.timestamp > twentyFourHours) {
+          // Session expired, clear storage
+          localStorage.removeItem('balajibook_user');
+          setUser(null);
+        } else {
+          // Session valid, restore user
+          setUser(authData.user);
+        }
+      } catch (error) {
+        // Invalid data in storage, clear it
+        localStorage.removeItem('balajibook_user');
+        setUser(null);
+      }
     }
   }, []);
 
@@ -40,8 +63,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         username,
         role: username as 'admin' | 'user'
       };
+      const authData: StoredAuth = {
+        user: userData,
+        timestamp: new Date().getTime()
+      };
       setUser(userData);
-      localStorage.setItem('balajibook_user', JSON.stringify(userData));
+      localStorage.setItem('balajibook_user', JSON.stringify(authData));
       return true;
     }
     return false;
