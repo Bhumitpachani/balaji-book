@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, FileText, TrendingUp, DollarSign, Clock, CheckCircle } from "lucide-react";
+import { Plus, FileText, TrendingUp, DollarSign, Clock, CheckCircle, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { firebaseService, Order } from "@/lib/firebaseService";
 import { MobileNavigation } from "@/components/common/MobileNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { PWAInstallPrompt } from "@/components/common/PWAInstallPrompt";
+import { toast } from "sonner";
 
 export const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMigrating, setIsMigrating] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -27,6 +29,31 @@ export const AdminDashboard: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const handleMigrateOrderNumbers = async () => {
+    if (!confirm('This will update all old timestamp-based order IDs to sequential numbers. Continue?')) {
+      return;
+    }
+
+    try {
+      setIsMigrating(true);
+      toast.info('Starting migration...');
+      await firebaseService.migrateOldOrderNumbers();
+      toast.success('Order numbers migrated successfully!');
+      await loadOrders(); // Reload to see updated data
+    } catch (error) {
+      console.error('Migration error:', error);
+      toast.error('Failed to migrate order numbers');
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
+  // Check if there are any old timestamp-based order numbers
+  const hasOldOrderNumbers = orders.some(order => {
+    const num = parseInt(order.number);
+    return !isNaN(num) && num > 999999;
+  });
 
   const stats = {
     total: orders.length,
@@ -87,6 +114,31 @@ export const AdminDashboard: React.FC = () => {
             </Link>
           </Button>
         </div>
+
+        {/* Migration Tool - Only show if there are old order numbers */}
+        {hasOldOrderNumbers && (
+          <Card className="border-yellow-500/50 bg-yellow-500/5">
+            <CardContent className="p-4">
+              <div className="flex flex-col gap-3">
+                <div>
+                  <p className="font-medium text-foreground">Old Order IDs Detected</p>
+                  <p className="text-sm text-muted-foreground">
+                    Some orders have timestamp-based IDs. Click below to convert them to sequential numbers (1, 2, 3...).
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleMigrateOrderNumbers} 
+                  disabled={isMigrating}
+                  variant="default"
+                  className="w-full"
+                >
+                  <RefreshCw className={`w-4 h-4 mr-2 ${isMigrating ? 'animate-spin' : ''}`} />
+                  {isMigrating ? 'Migrating...' : 'Fix Order Numbers'}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Overview Stats */}
         <div className="grid grid-cols-2 gap-4">
