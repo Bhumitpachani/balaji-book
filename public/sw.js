@@ -1,4 +1,4 @@
-const CACHE_NAME = 'balajibook-v4';
+const CACHE_NAME = 'balajibook-v5';
 const urlsToCache = [
   '/',
   '/manifest.json',
@@ -14,33 +14,59 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', (event) => {
+  // Take control as soon as the new service worker is installed
+  self.skipWaiting();
+
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    Promise.all([
+      // Clean up old caches
+      caches.keys().then((cacheNames) =>
+        Promise.all(
+          cacheNames.map((cacheName) => {
+            if (cacheName !== CACHE_NAME) {
+              return caches.delete(cacheName);
+            }
+            return undefined;
+          })
+        )
+      ),
+      // Start controlling open clients immediately
+      self.clients && self.clients.claim(),
+    ])
   );
 });
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request);
-      })
-  );
-});
+  const { request } = event;
 
-// Handle background sync, push notifications, etc.
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
+  // Always try network first for navigation requests (HTML pages)
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, responseClone);
+          });
+          return response;
         })
-      );
-    })
+        .catch(() =>
+          caches.match(request).then((cachedResponse) =>
+            cachedResponse || caches.match('/')
+          )
+        )
+    );
+    return;
+  }
+
+  // For other requests, use cache-first strategy
+  event.respondWith(
+    caches.match(request).then((response) => response || fetch(request))
   );
 });
