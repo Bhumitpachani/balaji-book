@@ -17,6 +17,7 @@ import { Analytics } from "./pages/Analytics";
 import { OrderDetail } from "./pages/OrderDetail";
 import { ClientManagement } from "./pages/ClientManagement";
 import { CreateClient } from "./pages/CreateClient";
+import { EditClient } from "./pages/EditClient";
 import { ClientOrders } from "./pages/ClientOrders";
 import { AdminOrdersTable } from "./pages/AdminOrdersTable";
 import NotFound from "./pages/NotFound";
@@ -140,6 +141,15 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute allowedRoles={['admin']}>
             <CreateClient />
+          </ProtectedRoute>
+        }
+      />
+      
+      <Route
+        path="/clients/:id/edit"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <EditClient />
           </ProtectedRoute>
         }
       />
