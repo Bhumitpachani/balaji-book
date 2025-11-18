@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if ((username === 'balaji' && password === '9978753398') || (username === 'user' && password === '9978753398')) {
       const userData: User = {
         username,
-        role: username as 'admin' | 'user'
+        role: username === 'balaji' ? 'admin' : 'user'
       };
       const authData: StoredAuth = {
         user: userData,
