@@ -171,9 +171,12 @@ class FirebaseService {
       }
     }
 
+    // Get next sequential order number
+    const nextOrderNumber = await this.getNextOrderNumber();
+
     const orderData = {
       orderName: data.orderName,
-      number: Date.now().toString(),
+      number: nextOrderNumber.nextNumber.toString(),
       work: data.work,
       status: data.status,
       addDate: data.addDate,
@@ -344,7 +347,22 @@ class FirebaseService {
   }
 
   async getNextOrderNumber(): Promise<{ nextNumber: number }> {
-    return { nextNumber: Date.now() };
+    try {
+      const ordersSnapshot = await getDocs(collection(db, 'orders'));
+      let maxNumber = 0;
+      
+      ordersSnapshot.docs.forEach(doc => {
+        const orderNumber = parseInt(doc.data().number);
+        if (!isNaN(orderNumber) && orderNumber > maxNumber) {
+          maxNumber = orderNumber;
+        }
+      });
+      
+      return { nextNumber: maxNumber + 1 };
+    } catch (error) {
+      console.error('Error getting next order number:', error);
+      return { nextNumber: 1 };
+    }
   }
 }
 

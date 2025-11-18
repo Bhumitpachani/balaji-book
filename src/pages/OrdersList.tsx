@@ -314,7 +314,7 @@ export const OrdersList: React.FC = () => {
                         <h3 className="font-semibold text-foreground text-lg truncate">
                           {order.orderName}
                         </h3>
-                        <p className="text-sm text-muted-foreground">#{order.id || 'N/A'}</p>
+                        <p className="text-sm text-muted-foreground">Order ID: #{order.number || 'N/A'}</p>
                       </div>
                       <div className="flex gap-2">
                         <StatusBadge status={order.status} />
