@@ -353,7 +353,9 @@ class FirebaseService {
       
       ordersSnapshot.docs.forEach(doc => {
         const orderNumber = parseInt(doc.data().number);
-        if (!isNaN(orderNumber) && orderNumber > maxNumber) {
+        // Only consider valid sequential numbers (less than 1 million)
+        // Ignore timestamp-based numbers (typically 13 digits)
+        if (!isNaN(orderNumber) && orderNumber > maxNumber && orderNumber < 1000000) {
           maxNumber = orderNumber;
         }
       });
@@ -362,6 +364,58 @@ class FirebaseService {
     } catch (error) {
       console.error('Error getting next order number:', error);
       return { nextNumber: 1 };
+    }
+  }
+
+  // Migration function to fix old timestamp-based order numbers
+  async migrateOldOrderNumbers(): Promise<void> {
+    try {
+      const ordersSnapshot = await getDocs(collection(db, 'orders'));
+      const ordersToUpdate: Array<{id: string, currentNumber: string}> = [];
+      
+      // Find orders with timestamp-based numbers
+      ordersSnapshot.docs.forEach(doc => {
+        const orderNumber = doc.data().number;
+        const numValue = parseInt(orderNumber);
+        
+        // If number is a timestamp (more than 6 digits), mark for update
+        if (!isNaN(numValue) && numValue > 999999) {
+          ordersToUpdate.push({
+            id: doc.id,
+            currentNumber: orderNumber
+          });
+        }
+      });
+
+      if (ordersToUpdate.length === 0) {
+        console.log('No orders need migration');
+        return;
+      }
+
+      // Get the highest valid sequential number
+      let nextSequential = 0;
+      ordersSnapshot.docs.forEach(doc => {
+        const orderNumber = parseInt(doc.data().number);
+        if (!isNaN(orderNumber) && orderNumber < 1000000 && orderNumber > nextSequential) {
+          nextSequential = orderNumber;
+        }
+      });
+
+      // Update orders with proper sequential numbers
+      for (const order of ordersToUpdate) {
+        nextSequential++;
+        const orderRef = doc(db, 'orders', order.id);
+        await updateDoc(orderRef, {
+          number: nextSequential.toString(),
+          updatedAt: Timestamp.now()
+        });
+        console.log(`Updated order ${order.id} from ${order.currentNumber} to ${nextSequential}`);
+      }
+
+      console.log(`Successfully migrated ${ordersToUpdate.length} orders`);
+    } catch (error) {
+      console.error('Error migrating order numbers:', error);
+      throw error;
     }
   }
 }
