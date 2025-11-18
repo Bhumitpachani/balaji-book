@@ -17,6 +17,16 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
+export const validateCredentials = (username: string, password: string): User | null => {
+  if ((username === 'balaji' && password === '9978753398') || (username === 'user' && password === '9978753398')) {
+    return {
+      username,
+      role: username === 'balaji' ? 'admin' : 'user',
+    };
+  }
+  return null;
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const useAuth = () => {
@@ -57,15 +67,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = (username: string, password: string): boolean => {
-    // Hardcoded credentials
-    if ((username === 'balaji' && password === '9978753398') || (username === 'user' && password === '9978753398')) {
-      const userData: User = {
-        username,
-        role: username === 'balaji' ? 'admin' : 'user'
-      };
+    const userData = validateCredentials(username, password);
+    if (userData) {
       const authData: StoredAuth = {
         user: userData,
-        timestamp: new Date().getTime()
+        timestamp: new Date().getTime(),
       };
       setUser(userData);
       localStorage.setItem('balajibook_user', JSON.stringify(authData));
