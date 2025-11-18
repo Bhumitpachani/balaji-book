@@ -111,6 +111,7 @@ export const AdminOrdersTable: React.FC = () => {
 
       // Prepare Excel data
       const excelData = filteredOrders.map(order => ({
+        'Order ID': order.number || 'N/A',
         'Client Name': order.clientName || 'N/A',
         'Mobile Number': order.clientMobileNumber || 'N/A',
         'Address': `${order.clientAddress || 'N/A'}, ${order.clientCity || 'N/A'}`,
@@ -122,7 +123,7 @@ export const AdminOrdersTable: React.FC = () => {
         'Status': order.status,
         'Payment Status': order.paymentStatus,
         'Type': order.type,
-        'File Path': order.imageUrls && order.imageUrls.length > 0 ? `uploaded_files/${order.orderName.replace(/[^a-zA-Z0-9]/g, '_')}_${order.id.slice(-6)}.jpg` : 'No file'
+        'File Path': order.imageUrls && order.imageUrls.length > 0 ? `uploaded_files/${order.orderName.replace(/[^a-zA-Z0-9]/g, '_')}_${order.number}.jpg` : 'No file'
       }));
 
       // Create Excel workbook
@@ -151,7 +152,7 @@ export const AdminOrdersTable: React.FC = () => {
             if (fileBlob && filesFolder) {
               const urlParts = imageUrl.split('.');
               const extension = urlParts.length > 1 ? urlParts.pop() : 'jpg';
-              const filename = `${order.orderName.replace(/[^a-zA-Z0-9]/g, '_')}_${order.id.slice(-6)}_${i + 1}.${extension}`;
+              const filename = `${order.orderName.replace(/[^a-zA-Z0-9]/g, '_')}_${order.number}_${i + 1}.${extension}`;
               filesFolder.file(filename, fileBlob);
             }
           }
@@ -266,6 +267,7 @@ export const AdminOrdersTable: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Order ID</TableHead>
                     <TableHead>Client Name</TableHead>
                     <TableHead>Mobile Number</TableHead>
                     <TableHead>Address</TableHead>
@@ -281,6 +283,9 @@ export const AdminOrdersTable: React.FC = () => {
                 <TableBody>
                   {currentOrders.map((order) => (
                     <TableRow key={order.id}>
+                      <TableCell className="font-bold text-primary">
+                        #{order.number}
+                      </TableCell>
                       <TableCell className="font-medium">
                         <Link to={`/orders/${order.id}`} className="hover:text-primary">
                           {order.clientName || 'N/A'}
@@ -338,9 +343,14 @@ export const AdminOrdersTable: React.FC = () => {
               <CardContent className="p-4">
                 <div className="space-y-3">
                   <div className="flex justify-between items-start">
-                    <Link to={`/orders/${order.id}`} className="font-medium text-primary hover:text-primary/80">
-                      {order.clientName || 'N/A'}
-                    </Link>
+                    <div className="flex-1">
+                      <div className="font-bold text-primary text-lg mb-1">
+                        Order #{order.number}
+                      </div>
+                      <Link to={`/orders/${order.id}`} className="font-medium text-foreground hover:text-primary">
+                        {order.clientName || 'N/A'}
+                      </Link>
+                    </div>
                     <div className="flex flex-col gap-1 items-end">
                       <StatusBadge status={order.status} type="order" />
                       <StatusBadge status={order.paymentStatus} type="payment" />
