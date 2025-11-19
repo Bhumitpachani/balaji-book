@@ -34,7 +34,7 @@ export interface Order {
   orderName: string;
   number: string;
   work: string;
-  status: 'Pending' | 'Running' | 'Done';
+  status: 'Pending' | 'Running' | 'Delivered' | 'Done';
   addDate: string;
   deliveryDate: string;
   type: 'Inquiry' | 'Confirm';

@@ -30,6 +30,7 @@ export const Analytics: React.FC = () => {
   const statusData = [
     { name: 'Pending', value: orders.filter(o => o.status === 'Pending').length },
     { name: 'Running', value: orders.filter(o => o.status === 'Running').length },
+    { name: 'Delivered', value: orders.filter(o => o.status === 'Delivered').length },
     { name: 'Done', value: orders.filter(o => o.status === 'Done').length },
   ].filter(item => item.value > 0);
 
