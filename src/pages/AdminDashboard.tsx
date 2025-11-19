@@ -59,6 +59,7 @@ export const AdminDashboard: React.FC = () => {
     total: orders.length,
     pending: orders.filter(o => o.status === 'Pending').length,
     running: orders.filter(o => o.status === 'Running').length,
+    delivered: orders.filter(o => o.status === 'Delivered').length,
     completed: orders.filter(o => o.status === 'Done').length,
     paid: orders.filter(o => o.paymentStatus === 'Paid').length,
     unpaid: orders.filter(o => o.paymentStatus === 'Unpaid').length,
@@ -165,6 +166,34 @@ export const AdminDashboard: React.FC = () => {
                 <div>
                   <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
                   <p className="text-sm text-muted-foreground">Pending</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <Clock className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{stats.running}</p>
+                  <p className="text-sm text-muted-foreground">Running</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{stats.delivered}</p>
+                  <p className="text-sm text-muted-foreground">Delivered</p>
                 </div>
               </div>
             </CardContent>
