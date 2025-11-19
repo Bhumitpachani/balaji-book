@@ -429,7 +429,7 @@ export const AdminOrdersTable: React.FC = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-6 flex justify-center">
+          <div style={{marginBottom:"4rem"}} className="mt-6 flex justify-center">
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
