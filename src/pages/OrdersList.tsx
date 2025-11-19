@@ -109,7 +109,8 @@ export const OrdersList: React.FC = () => {
     }
     
     if (currentStatus === 'Pending') return 'Running';
-    if (currentStatus === 'Running') return 'Done';
+    if (currentStatus === 'Running') return 'Delivered';
+    if (currentStatus === 'Delivered') return 'Done';
     return null;
   };
 
@@ -248,6 +249,7 @@ export const OrdersList: React.FC = () => {
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="Pending">Pending</SelectItem>
                   <SelectItem value="Running">Running</SelectItem>
+                  <SelectItem value="Delivered">Delivered</SelectItem>
                   <SelectItem value="Done">Done</SelectItem>
                 </SelectContent>
               </Select>

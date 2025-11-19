@@ -253,6 +253,7 @@ export const AdminOrdersTable: React.FC = () => {
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="Pending">Pending</SelectItem>
                   <SelectItem value="Running">Running</SelectItem>
+                  <SelectItem value="Delivered">Delivered</SelectItem>
                   <SelectItem value="Done">Done</SelectItem>
                 </SelectContent>
               </Select>

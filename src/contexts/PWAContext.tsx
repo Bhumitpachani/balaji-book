@@ -44,8 +44,24 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return isStandalone || isInWebAppiOS || isStorageInstalled;
     };
 
+    const checkIfDismissed = () => {
+      const dismissed = localStorage.getItem('balajibook_install_dismissed');
+      if (!dismissed) return false;
+      
+      // Check if dismissed more than 7 days ago
+      const dismissedTime = parseInt(dismissed);
+      const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+      return dismissedTime > sevenDaysAgo;
+    };
+
     // Set initial installation status
-    setIsInstalled(checkIfInstalled());
+    const installed = checkIfInstalled();
+    setIsInstalled(installed);
+
+    // Show prompt if not installed and not recently dismissed
+    if (!installed && !checkIfDismissed()) {
+      setIsInstallable(true);
+    }
 
     // Listen for beforeinstallprompt event
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -53,8 +69,8 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const installEvent = e as BeforeInstallPromptEvent;
       setDeferredPrompt(installEvent);
       
-      // Only show install prompt if not already installed
-      if (!checkIfInstalled()) {
+      // Only show install prompt if not already installed and not dismissed
+      if (!checkIfInstalled() && !checkIfDismissed()) {
         setIsInstallable(true);
       }
     };
@@ -65,6 +81,7 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsInstallable(false);
       setDeferredPrompt(null);
       localStorage.setItem('balajibook_installed', 'true');
+      localStorage.removeItem('balajibook_install_dismissed');
     };
 
     // Add event listeners
@@ -79,10 +96,13 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const showInstallPrompt = () => {
     setIsInstallable(true);
+    localStorage.removeItem('balajibook_install_dismissed');
   };
 
   const hideInstallPrompt = () => {
     setIsInstallable(false);
+    // Remember dismissal for 7 days
+    localStorage.setItem('balajibook_install_dismissed', Date.now().toString());
   };
 
   const installApp = async () => {
@@ -99,6 +119,10 @@ export const PWAProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (choiceResult.outcome === 'accepted') {
         setIsInstalled(true);
         localStorage.setItem('balajibook_installed', 'true');
+        localStorage.removeItem('balajibook_install_dismissed');
+      } else {
+        // User dismissed the native prompt
+        localStorage.setItem('balajibook_install_dismissed', Date.now().toString());
       }
       
       setIsInstallable(false);
