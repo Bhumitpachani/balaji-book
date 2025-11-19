@@ -196,12 +196,12 @@ All colors MUST be HSL.
     @apply bg-primary text-primary-foreground;
   }
 
-  .status-delivered {
-    @apply bg-accent text-accent-foreground;
-  }
-
   .status-done {
     @apply bg-success text-success-foreground;
+  }
+
+  .status-delivered {
+    @apply bg-accent text-accent-foreground;
   }
 
   .status-paid {

@@ -86,8 +86,8 @@ export const OrderDetail: React.FC = () => {
     }
     
     if (currentStatus === 'Pending') return 'Running';
-    if (currentStatus === 'Running') return 'Delivered';
-    if (currentStatus === 'Delivered') return 'Done';
+    if (currentStatus === 'Running') return 'Done';
+    if (currentStatus === 'Done') return 'Delivered';
     return null;
   };
 

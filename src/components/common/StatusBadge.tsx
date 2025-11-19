@@ -22,10 +22,10 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
         return 'status-pending';
       case 'Running':
         return 'status-running';
-      case 'Delivered':
-        return 'status-delivered';
       case 'Done':
         return 'status-done';
+      case 'Delivered':
+        return 'status-delivered';
       default:
         return 'bg-muted text-muted-foreground';
     }
