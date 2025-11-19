@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Filter, Eye, Edit, Trash2, ExternalLink, DollarSign, User } from "lucide-react";
+import { Plus, Search, Filter, Eye, Edit, Trash2, ExternalLink, DollarSign, User, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { firebaseService, Order, Client } from "@/lib/firebaseService";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -26,6 +26,8 @@ export const OrdersList: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
     loadOrders();
@@ -188,6 +190,17 @@ export const OrdersList: React.FC = () => {
     return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, typeFilter, fromDate, toDate]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -205,6 +218,7 @@ export const OrdersList: React.FC = () => {
             <h1 className="text-xl font-bold text-foreground">Orders</h1>
             <p className="text-sm text-muted-foreground">
               {filteredOrders.length} of {orders.length} orders
+              {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
             </p>
           </div>
           {user?.role === 'admin' && (
@@ -265,6 +279,22 @@ export const OrdersList: React.FC = () => {
                 </SelectContent>
               </Select>
 
+              <Select value={itemsPerPage.toString()} onValueChange={(value) => {
+                setItemsPerPage(Number(value));
+                setCurrentPage(1);
+              }}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Items per page" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 per page</SelectItem>
+                  <SelectItem value="10">10 per page</SelectItem>
+                  <SelectItem value="20">20 per page</SelectItem>
+                  <SelectItem value="50">50 per page</SelectItem>
+                  <SelectItem value="100">100 per page</SelectItem>
+                </SelectContent>
+              </Select>
+
               <Input
                 type="date"
                 value={fromDate}
@@ -306,7 +336,7 @@ export const OrdersList: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            filteredOrders.map((order) => (
+            paginatedOrders.map((order) => (
               <Card key={order.id} className="shadow-card hover:shadow-lg transition-shadow">
                 <CardContent className="p-4">
                   <div className="space-y-4">
@@ -461,6 +491,68 @@ export const OrdersList: React.FC = () => {
                 </CardContent>
               </Card>
             ))
+          )}
+
+          {/* Pagination Controls */}
+          {filteredOrders.length > 0 && totalPages > 1 && (
+            <Card className="shadow-card">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </Button>
+                    
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                        // Show first page, last page, current page, and pages around current
+                        const showPage = page === 1 || 
+                                       page === totalPages || 
+                                       Math.abs(page - currentPage) <= 1;
+                        
+                        const showEllipsis = (page === 2 && currentPage > 3) ||
+                                           (page === totalPages - 1 && currentPage < totalPages - 2);
+
+                        if (showEllipsis) {
+                          return <span key={page} className="px-2 text-muted-foreground">...</span>;
+                        }
+
+                        if (!showPage) return null;
+
+                        return (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className="w-10"
+                          >
+                            {page}
+                          </Button>
+                        );
+                      })}
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       </div>
