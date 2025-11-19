@@ -48,6 +48,7 @@ export const UserDashboard: React.FC = () => {
     total: filteredOrders.length,
     pending: filteredOrders.filter(o => o.status === 'Pending').length,
     running: filteredOrders.filter(o => o.status === 'Running').length,
+    delivered: filteredOrders.filter(o => o.status === 'Delivered').length,
     completed: filteredOrders.filter(o => o.status === 'Done').length,
   };
 
@@ -154,6 +155,20 @@ export const UserDashboard: React.FC = () => {
                 <div>
                   <p className="text-2xl font-bold text-foreground">{stats.running}</p>
                   <p className="text-sm text-muted-foreground">In Progress</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-accent" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{stats.delivered}</p>
+                  <p className="text-sm text-muted-foreground">Delivered</p>
                 </div>
               </div>
             </CardContent>
