@@ -557,6 +557,9 @@ export const OrdersList: React.FC = () => {
         </div>
       </div>
 
+      {/* Bottom spacing for mobile navigation */}
+      <div className="h-20 md:h-0" />
+
       {/* Mobile Navigation */}
       <MobileNavigation />
 
