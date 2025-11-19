@@ -495,20 +495,21 @@ export const OrdersList: React.FC = () => {
 
           {/* Pagination Controls */}
           {filteredOrders.length > 0 && totalPages > 1 && (
-            <Card className="shadow-card">
+            <Card className="shadow-card mt-4 mb-6">
               <CardContent className="p-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <div className="text-sm text-muted-foreground">
                     Showing {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} orders
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap justify-center">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Previous
                     </Button>
                     
                     <div className="flex items-center gap-1">
@@ -533,7 +534,7 @@ export const OrdersList: React.FC = () => {
                             variant={currentPage === page ? "default" : "outline"}
                             size="sm"
                             onClick={() => setCurrentPage(page)}
-                            className="w-10"
+                            className="min-w-10"
                           >
                             {page}
                           </Button>
@@ -547,7 +548,8 @@ export const OrdersList: React.FC = () => {
                       onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      Next
+                      <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   </div>
                 </div>
