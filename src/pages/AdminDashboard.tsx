@@ -59,8 +59,8 @@ export const AdminDashboard: React.FC = () => {
     total: orders.length,
     pending: orders.filter(o => o.status === 'Pending').length,
     running: orders.filter(o => o.status === 'Running').length,
+    done: orders.filter(o => o.status === 'Done').length,
     delivered: orders.filter(o => o.status === 'Delivered').length,
-    completed: orders.filter(o => o.status === 'Done').length,
     paid: orders.filter(o => o.paymentStatus === 'Paid').length,
     unpaid: orders.filter(o => o.paymentStatus === 'Unpaid').length,
     inquiry: orders.filter(o => o.type === 'Inquiry').length,
@@ -188,12 +188,12 @@ export const AdminDashboard: React.FC = () => {
           <Card className="shadow-card">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-accent" />
+                <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-success" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{stats.delivered}</p>
-                  <p className="text-sm text-muted-foreground">Delivered</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.done}</p>
+                  <p className="text-sm text-muted-foreground">Done</p>
                 </div>
               </div>
             </CardContent>
@@ -202,12 +202,12 @@ export const AdminDashboard: React.FC = () => {
           <Card className="shadow-card">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-success" />
+                <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-5 h-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{stats.completed}</p>
-                  <p className="text-sm text-muted-foreground">Completed</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.delivered}</p>
+                  <p className="text-sm text-muted-foreground">Delivered</p>
                 </div>
               </div>
             </CardContent>

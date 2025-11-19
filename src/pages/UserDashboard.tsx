@@ -48,8 +48,8 @@ export const UserDashboard: React.FC = () => {
     total: filteredOrders.length,
     pending: filteredOrders.filter(o => o.status === 'Pending').length,
     running: filteredOrders.filter(o => o.status === 'Running').length,
+    done: filteredOrders.filter(o => o.status === 'Done').length,
     delivered: filteredOrders.filter(o => o.status === 'Delivered').length,
-    completed: filteredOrders.filter(o => o.status === 'Done').length,
   };
 
   if (isLoading) {
@@ -136,7 +136,7 @@ export const UserDashboard: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-warning/10 rounded-lg flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-warning" />
+                  <Clock className="w-4 h-4 text-warning" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
@@ -150,25 +150,11 @@ export const UserDashboard: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-primary" />
+                  <Clock className="w-4 h-4 text-primary" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">{stats.running}</p>
-                  <p className="text-sm text-muted-foreground">In Progress</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-card">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-accent" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{stats.delivered}</p>
-                  <p className="text-sm text-muted-foreground">Delivered</p>
+                  <p className="text-sm text-muted-foreground">Running</p>
                 </div>
               </div>
             </CardContent>
@@ -178,11 +164,25 @@ export const UserDashboard: React.FC = () => {
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
-                  <CheckCircle className="w-5 h-5 text-success" />
+                  <CheckCircle className="w-4 h-4 text-success" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{stats.completed}</p>
-                  <p className="text-sm text-muted-foreground">Completed</p>
+                  <p className="text-2xl font-bold text-foreground">{stats.done}</p>
+                  <p className="text-sm text-muted-foreground">Done</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center">
+                  <CheckCircle className="w-4 h-4 text-accent" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-foreground">{stats.delivered}</p>
+                  <p className="text-sm text-muted-foreground">Delivered</p>
                 </div>
               </div>
             </CardContent>

@@ -30,8 +30,8 @@ export const Analytics: React.FC = () => {
   const statusData = [
     { name: 'Pending', value: orders.filter(o => o.status === 'Pending').length },
     { name: 'Running', value: orders.filter(o => o.status === 'Running').length },
-    { name: 'Delivered', value: orders.filter(o => o.status === 'Delivered').length },
     { name: 'Done', value: orders.filter(o => o.status === 'Done').length },
+    { name: 'Delivered', value: orders.filter(o => o.status === 'Delivered').length },
   ].filter(item => item.value > 0);
 
   const paymentData = [
@@ -63,7 +63,7 @@ export const Analytics: React.FC = () => {
 
   const stats = {
     total: orders.length,
-    completed: orders.filter(o => o.status === 'Done').length,
+    completed: orders.filter(o => o.status === 'Delivered').length,
     paid: orders.filter(o => o.paymentStatus === 'Paid').length,
     inquiries: orders.filter(o => o.type === 'Inquiry').length,
   };

@@ -290,8 +290,8 @@ export const CreateOrder: React.FC = () => {
                   <SelectContent>
                     <SelectItem value="Pending">Pending</SelectItem>
                     <SelectItem value="Running">Running</SelectItem>
-                    <SelectItem value="Delivered">Delivered</SelectItem>
                     <SelectItem value="Done">Done</SelectItem>
+                    <SelectItem value="Delivered">Delivered</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
