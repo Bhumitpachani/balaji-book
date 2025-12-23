@@ -29,6 +29,19 @@ export const OrdersList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // Load typeFilter from localStorage on mount
+  useEffect(() => {
+    const savedFilter = localStorage.getItem('typeFilter');
+    if (savedFilter) {
+      setTypeFilter(savedFilter);
+    }
+  }, []);
+
+  // Save typeFilter to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('typeFilter', typeFilter);
+  }, [typeFilter]);
+
   // Helper: Check if order is overdue
   const isOverdue = (order: Order): boolean => {
     if (!order.deliveryDate || order.status === 'Delivered') return false;
@@ -106,13 +119,11 @@ export const OrdersList: React.FC = () => {
       if (isFullPayment) {
         await firebaseService.updateOrder(selectedOrder.id, { paymentStatus: 'Paid' });
       }
-
       setOrders(prev => prev.map(order =>
         order.id === selectedOrder.id
           ? { ...order, receivedPayment: newReceivedAmount, paymentStatus: isFullPayment ? 'Paid' : 'Unpaid' }
           : order
       ));
-
       toast({
         title: "Success",
         description: `₹${(newReceivedAmount - selectedOrder.receivedPayment).toLocaleString('en-IN')} collected${isFullPayment ? ' → Fully Paid!' : ''}`,
@@ -129,19 +140,15 @@ export const OrdersList: React.FC = () => {
   // Filtering Logic (with overdue support)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-
   const filteredOrders = orders.filter(order => {
     if (!order || !order.id) return false;
-
     const clientName = order.clientName || '';
     const clientMobile = order.clientMobileNumber || '';
-
-    const matchesSearch = 
+    const matchesSearch =
       (order.orderName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.number || '').includes(searchTerm) ||
       clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       clientMobile.includes(searchTerm);
-
     // Status filter including "overdue"
     let matchesStatus = true;
     if (statusFilter === 'overdue') {
@@ -149,9 +156,7 @@ export const OrdersList: React.FC = () => {
     } else if (statusFilter !== 'all') {
       matchesStatus = order.status === statusFilter;
     }
-
     const matchesType = typeFilter === 'all' || order.type === typeFilter;
-
     let matchesDate = true;
     if (fromDate && toDate && order.addDate) {
       const orderDate = new Date(order.addDate);
@@ -160,7 +165,6 @@ export const OrdersList: React.FC = () => {
       to.setHours(23, 59, 59, 999);
       matchesDate = orderDate >= from && orderDate <= to;
     }
-
     return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
 
@@ -207,7 +211,6 @@ export const OrdersList: React.FC = () => {
           )}
         </div>
       </header>
-
       <div className="p-4 space-y-4">
         {/* Filters */}
         <Card className="shadow-card">
@@ -227,7 +230,6 @@ export const OrdersList: React.FC = () => {
                 className="pl-10"
               />
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               {/* Status Filter with "Due Orders" */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -245,7 +247,6 @@ export const OrdersList: React.FC = () => {
                   </SelectItem>
                 </SelectContent>
               </Select>
-
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Type" />
@@ -256,7 +257,6 @@ export const OrdersList: React.FC = () => {
                   <SelectItem value="Confirm">Confirm</SelectItem>
                 </SelectContent>
               </Select>
-
               <Select value={itemsPerPage.toString()} onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Items per page" />
@@ -267,11 +267,9 @@ export const OrdersList: React.FC = () => {
                   <SelectItem value="50">50 per page</SelectItem>
                 </SelectContent>
               </Select>
-
               <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} placeholder="From" />
               <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} placeholder="To" />
             </div>
-
             {(fromDate || toDate) && (
               <Button variant="outline" size="sm" onClick={() => { setFromDate(''); setToDate(''); }} className="w-full">
                 Clear Date Filter
@@ -279,7 +277,6 @@ export const OrdersList: React.FC = () => {
             )}
           </CardContent>
         </Card>
-
         {/* Orders List */}
         <div className="space-y-3" style={{ marginBottom: "80px" }}>
           {filteredOrders.length === 0 ? (
@@ -291,7 +288,6 @@ export const OrdersList: React.FC = () => {
           ) : (
             paginatedOrders.map((order) => {
               const overdue = isOverdue(order);
-
               return (
                 <Card
                   key={order.id}
@@ -324,7 +320,6 @@ export const OrdersList: React.FC = () => {
                           )}
                         </div>
                       </div>
-
                       {/* Client Info */}
                       {order.clientName && (
                         <div className="bg-muted/30 p-3 rounded-lg border border-border">
@@ -339,13 +334,11 @@ export const OrdersList: React.FC = () => {
                           </div>
                         </div>
                       )}
-
                       {/* Work Description */}
                       <div className="bg-card p-3 rounded-lg border border-border">
                         <p className="text-sm text-muted-foreground mb-1">Work Description:</p>
                         <p className="text-sm text-foreground line-clamp-3">{order.work}</p>
                       </div>
-
                       {/* Dates */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-card p-3 rounded-lg border border-border">
@@ -359,7 +352,6 @@ export const OrdersList: React.FC = () => {
                           </p>
                         </div>
                       </div>
-
                       {/* Payment */}
                       <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-4 rounded-lg border border-primary/20">
                         <div className="grid grid-cols-2 gap-4">
@@ -384,7 +376,6 @@ export const OrdersList: React.FC = () => {
                           <StatusBadge status={order.paymentStatus} type="payment" />
                         </div>
                       </div>
-
                       {/* Actions */}
                       <div className="flex gap-2 flex-wrap">
                         <Button asChild size="sm" variant="outline" className="flex-1">
@@ -421,7 +412,6 @@ export const OrdersList: React.FC = () => {
               );
             })
           )}
-
           {/* Pagination */}
           {totalPages > 1 && (
             <Card className="shadow-card mt-6">
@@ -444,10 +434,8 @@ export const OrdersList: React.FC = () => {
           )}
         </div>
       </div>
-
       <div className="h-20 md:h-0" />
       <MobileNavigation />
-
       {/* Payment Modal */}
       {selectedOrder && (
         <PaymentModal
