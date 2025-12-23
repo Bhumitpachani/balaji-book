@@ -16,7 +16,6 @@ import { Download, FileText, ArrowLeft, Search } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
 
-
 const ITEMS_PER_PAGE = 10;
 
 export const AdminOrdersTable: React.FC = () => {
@@ -32,6 +31,19 @@ export const AdminOrdersTable: React.FC = () => {
   useEffect(() => {
     loadOrders();
   }, []);
+
+  // Load status filter from localStorage on mount
+  useEffect(() => {
+    const savedFilter = localStorage.getItem('statusFilter');
+    if (savedFilter) {
+      setStatusFilter(savedFilter);
+    }
+  }, []);
+
+  // Save status filter to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('statusFilter', statusFilter);
+  }, [statusFilter]);
 
   useEffect(() => {
     filterOrders();
@@ -52,7 +64,6 @@ export const AdminOrdersTable: React.FC = () => {
 
   const filterOrders = () => {
     let filtered = orders;
-
     if (searchTerm) {
       filtered = filtered.filter(order =>
         order.orderName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -61,14 +72,11 @@ export const AdminOrdersTable: React.FC = () => {
         order.work.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
     if (statusFilter !== 'all') {
       filtered = filtered.filter(order => order.status === statusFilter);
     }
-
     // Sort by creation date - newest first
     filtered.sort((a, b) => new Date(b.createdAt || b.addDate).getTime() - new Date(a.createdAt || a.addDate).getTime());
-
     setFilteredOrders(filtered);
     setCurrentPage(1);
   };
@@ -108,7 +116,6 @@ export const AdminOrdersTable: React.FC = () => {
     try {
       setIsExporting(true);
       toast.info('Preparing export...');
-
       // Prepare Excel data
       const excelData = filteredOrders.map(order => ({
         'Order ID': order.number || 'N/A',
@@ -125,22 +132,19 @@ export const AdminOrdersTable: React.FC = () => {
         'Type': order.type,
         'File Path': order.imageUrls && order.imageUrls.length > 0 ? `uploaded_files/${order.orderName.replace(/[^a-zA-Z0-9]/g, '_')}_${order.number}.jpg` : 'No file'
       }));
-
       // Create Excel workbook
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(excelData);
       XLSX.utils.book_append_sheet(wb, ws, 'Orders');
-
       // Create ZIP file with Excel and uploaded files
       const zip = new JSZip();
-      
+     
       // Add Excel file to ZIP
       const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
       zip.file('orders_data.xlsx', excelBuffer);
-
       // Create uploaded files folder in ZIP
       const filesFolder = zip.folder('uploaded_files');
-      
+     
       // Download and add uploaded files
       let fileCount = 0;
       for (const order of filteredOrders) {
@@ -158,11 +162,10 @@ export const AdminOrdersTable: React.FC = () => {
           }
         }
       }
-
       // Generate and download ZIP file
       toast.info('Generating ZIP file...');
       const zipBlob = await zip.generateAsync({ type: 'blob' });
-      
+     
       // Create download link
       const url = window.URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
@@ -172,7 +175,6 @@ export const AdminOrdersTable: React.FC = () => {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-
       toast.success('Export completed successfully!');
     } catch (error) {
       console.error('Error exporting data:', error);
@@ -213,8 +215,8 @@ export const AdminOrdersTable: React.FC = () => {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button 
-              onClick={exportToExcel} 
+            <Button
+              onClick={exportToExcel}
               disabled={isExporting || filteredOrders.length === 0}
               className="flex items-center gap-2"
             >
@@ -226,7 +228,6 @@ export const AdminOrdersTable: React.FC = () => {
             </Button>
           </div>
         </div>
-
         {/* Filters */}
         <Card className="mb-6">
           <CardHeader>
@@ -260,7 +261,6 @@ export const AdminOrdersTable: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
         {/* Table - Desktop View */}
         <Card className="hidden md:block">
           <CardContent className="p-0">
@@ -309,9 +309,9 @@ export const AdminOrdersTable: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         {order.imageUrls && order.imageUrls.length > 0 ? (
-                          <a 
-                            href={order.imageUrls[0]} 
-                            target="_blank" 
+                          <a
+                            href={order.imageUrls[0]}
+                            target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-primary hover:text-primary/80"
                           >
@@ -336,7 +336,6 @@ export const AdminOrdersTable: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-
         {/* Mobile Cards View */}
         <div className="md:hidden space-y-4">
           {currentOrders.map((order) => (
@@ -357,7 +356,7 @@ export const AdminOrdersTable: React.FC = () => {
                       <StatusBadge status={order.paymentStatus} type="payment" />
                     </div>
                   </div>
-                  
+                 
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Mobile:</span>
@@ -368,17 +367,14 @@ export const AdminOrdersTable: React.FC = () => {
                       <p className="font-medium">{order.type}</p>
                     </div>
                   </div>
-
                   <div className="text-sm">
                     <span className="text-muted-foreground">Address:</span>
                     <p className="font-medium">{`${order.clientAddress || 'N/A'}, ${order.clientCity || 'N/A'}`}</p>
                   </div>
-
                   <div className="text-sm">
                     <span className="text-muted-foreground">Description:</span>
                     <p className="font-medium">{order.work}</p>
                   </div>
-
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Added:</span>
@@ -389,7 +385,6 @@ export const AdminOrdersTable: React.FC = () => {
                       <p className="font-medium">{formatDate(order.deliveryDate)}</p>
                     </div>
                   </div>
-
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Total:</span>
@@ -400,12 +395,11 @@ export const AdminOrdersTable: React.FC = () => {
                       <p className="font-medium">{formatCurrency(order.receivedPayment)}</p>
                     </div>
                   </div>
-
                   {order.imageUrls && order.imageUrls.length > 0 && (
                     <div className="flex justify-end">
-                      <a 
-                        href={order.imageUrls[0]} 
-                        target="_blank" 
+                      <a
+                        href={order.imageUrls[0]}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 text-primary hover:text-primary/80 text-sm"
                       >
@@ -426,19 +420,18 @@ export const AdminOrdersTable: React.FC = () => {
             </Card>
           )}
         </div>
-
         {/* Pagination */}
         {totalPages > 1 && (
           <div style={{marginBottom:"4rem"}} className="mt-6 flex justify-center">
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
-                  <PaginationPrevious 
+                  <PaginationPrevious
                     onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                     className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   />
                 </PaginationItem>
-                
+               
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                   <PaginationItem key={page}>
                     <PaginationLink
@@ -450,9 +443,9 @@ export const AdminOrdersTable: React.FC = () => {
                     </PaginationLink>
                   </PaginationItem>
                 ))}
-                
+               
                 <PaginationItem>
-                  <PaginationNext 
+                  <PaginationNext
                     onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                     className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   />
@@ -461,7 +454,6 @@ export const AdminOrdersTable: React.FC = () => {
             </Pagination>
           </div>
         )}
-
         <PWAInstallPrompt />
         <MobileNavigation />
       </div>
