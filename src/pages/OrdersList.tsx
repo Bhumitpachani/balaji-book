@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Filter, Eye, Edit, Trash2, DollarSign, User, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Filter, Eye, Edit, Trash2, DollarSign, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import { firebaseService, Order } from "@/lib/firebaseService";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -26,18 +26,25 @@ export const OrdersList: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Load typeFilter from localStorage on mount
+  // Load filters from localStorage on mount
   useEffect(() => {
-    const savedFilter = localStorage.getItem('typeFilter');
-    if (savedFilter) {
-      setTypeFilter(savedFilter);
+    const savedStatusFilter = localStorage.getItem('statusFilter');
+    const savedTypeFilter = localStorage.getItem('typeFilter');
+
+    if (savedStatusFilter) {
+      setStatusFilter(savedStatusFilter);
+    }
+    if (savedTypeFilter) {
+      setTypeFilter(savedTypeFilter);
     }
   }, []);
 
-  // Save typeFilter to localStorage whenever it changes
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('statusFilter', statusFilter);
+  }, [statusFilter]);
+
   useEffect(() => {
     localStorage.setItem('typeFilter', typeFilter);
   }, [typeFilter]);
@@ -137,9 +144,7 @@ export const OrdersList: React.FC = () => {
     }
   };
 
-  // Filtering Logic (with overdue support)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Filtering Logic
   const filteredOrders = orders.filter(order => {
     if (!order || !order.id) return false;
     const clientName = order.clientName || '';
@@ -149,14 +154,16 @@ export const OrdersList: React.FC = () => {
       (order.number || '').includes(searchTerm) ||
       clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       clientMobile.includes(searchTerm);
-    // Status filter including "overdue"
+
     let matchesStatus = true;
     if (statusFilter === 'overdue') {
       matchesStatus = isOverdue(order);
     } else if (statusFilter !== 'all') {
       matchesStatus = order.status === statusFilter;
     }
+
     const matchesType = typeFilter === 'all' || order.type === typeFilter;
+
     let matchesDate = true;
     if (fromDate && toDate && order.addDate) {
       const orderDate = new Date(order.addDate);
@@ -165,18 +172,9 @@ export const OrdersList: React.FC = () => {
       to.setHours(23, 59, 59, 999);
       matchesDate = orderDate >= from && orderDate <= to;
     }
+
     return matchesSearch && matchesStatus && matchesType && matchesDate;
   });
-
-  // Pagination
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, typeFilter, fromDate, toDate]);
 
   if (isLoading) {
     return (
@@ -198,7 +196,6 @@ export const OrdersList: React.FC = () => {
                 ? `${filteredOrders.length} overdue order${filteredOrders.length !== 1 ? 's' : ''}`
                 : `${filteredOrders.length} of ${orders.length} orders`
               }
-              {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
             </p>
           </div>
           {user?.role === 'admin' && (
@@ -211,6 +208,7 @@ export const OrdersList: React.FC = () => {
           )}
         </div>
       </header>
+
       <div className="p-4 space-y-4">
         {/* Filters */}
         <Card className="shadow-card">
@@ -230,8 +228,8 @@ export const OrdersList: React.FC = () => {
                 className="pl-10"
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              {/* Status Filter with "Due Orders" */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Status Filter */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Status" />
@@ -247,6 +245,8 @@ export const OrdersList: React.FC = () => {
                   </SelectItem>
                 </SelectContent>
               </Select>
+
+              {/* Type Filter */}
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Type" />
@@ -257,19 +257,12 @@ export const OrdersList: React.FC = () => {
                   <SelectItem value="Confirm">Confirm</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={itemsPerPage.toString()} onValueChange={(v) => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Items per page" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10 per page</SelectItem>
-                  <SelectItem value="20">20 per page</SelectItem>
-                  <SelectItem value="50">50 per page</SelectItem>
-                </SelectContent>
-              </Select>
+
+              {/* Date Filters */}
               <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} placeholder="From" />
               <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} placeholder="To" />
             </div>
+
             {(fromDate || toDate) && (
               <Button variant="outline" size="sm" onClick={() => { setFromDate(''); setToDate(''); }} className="w-full">
                 Clear Date Filter
@@ -277,7 +270,8 @@ export const OrdersList: React.FC = () => {
             )}
           </CardContent>
         </Card>
-        {/* Orders List */}
+
+        {/* Orders List - All filtered orders shown */}
         <div className="space-y-3" style={{ marginBottom: "80px" }}>
           {filteredOrders.length === 0 ? (
             <Card className="shadow-card">
@@ -286,7 +280,7 @@ export const OrdersList: React.FC = () => {
               </CardContent>
             </Card>
           ) : (
-            paginatedOrders.map((order) => {
+            filteredOrders.map((order) => {
               const overdue = isOverdue(order);
               return (
                 <Card
@@ -320,6 +314,7 @@ export const OrdersList: React.FC = () => {
                           )}
                         </div>
                       </div>
+
                       {/* Client Info */}
                       {order.clientName && (
                         <div className="bg-muted/30 p-3 rounded-lg border border-border">
@@ -334,11 +329,13 @@ export const OrdersList: React.FC = () => {
                           </div>
                         </div>
                       )}
+
                       {/* Work Description */}
                       <div className="bg-card p-3 rounded-lg border border-border">
                         <p className="text-sm text-muted-foreground mb-1">Work Description:</p>
                         <p className="text-sm text-foreground line-clamp-3">{order.work}</p>
                       </div>
+
                       {/* Dates */}
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-card p-3 rounded-lg border border-border">
@@ -352,6 +349,7 @@ export const OrdersList: React.FC = () => {
                           </p>
                         </div>
                       </div>
+
                       {/* Payment */}
                       <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-4 rounded-lg border border-primary/20">
                         <div className="grid grid-cols-2 gap-4">
@@ -376,6 +374,7 @@ export const OrdersList: React.FC = () => {
                           <StatusBadge status={order.paymentStatus} type="payment" />
                         </div>
                       </div>
+
                       {/* Actions */}
                       <div className="flex gap-2 flex-wrap">
                         <Button asChild size="sm" variant="outline" className="flex-1">
@@ -412,30 +411,12 @@ export const OrdersList: React.FC = () => {
               );
             })
           )}
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <Card className="shadow-card mt-6">
-              <CardContent className="p-4">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <p className="text-sm text-muted-foreground">
-                    Showing {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length}
-                  </p>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>
-                      <ChevronLeft className="w-4 h-4" /> Prev
-                    </Button>
-                    <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>
-                      Next <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
+
       <div className="h-20 md:h-0" />
       <MobileNavigation />
+
       {/* Payment Modal */}
       {selectedOrder && (
         <PaymentModal
