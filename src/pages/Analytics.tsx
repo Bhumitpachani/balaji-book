@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { TrendingUp, FileText, DollarSign, Package, Users, Wallet, AlertTriangle, Clock, BadgePercent } from "lucide-react";
 import { firebaseService, Order, Client } from "@/lib/firebaseService";
@@ -37,6 +38,11 @@ const getDaysSince = (value?: Date) => {
   if (!value) return null;
   const today = startOfDay(new Date());
   return Math.floor((today.getTime() - startOfDay(value).getTime()) / (24 * 60 * 60 * 1000));
+};
+
+const getOrderAgeDays = (order: Order) => {
+  const orderDate = parseDate(order.addDate) || parseDate(order.createdAt as Date);
+  return orderDate ? getDaysSince(orderDate) : null;
 };
 
 export const Analytics: React.FC = () => {
@@ -172,6 +178,54 @@ export const Analytics: React.FC = () => {
       setInactivityDays(Math.max(1, parsed));
     }
   };
+
+  const openOrders = React.useMemo(
+    () => orders.filter(order => order.status === 'Pending' || order.status === 'Running'),
+    [orders]
+  );
+
+  const pendingAgeData = React.useMemo(() => {
+    const buckets = [
+      { label: '0-7d', min: 0, max: 7 },
+      { label: '8-14d', min: 8, max: 14 },
+      { label: '15-30d', min: 15, max: 30 },
+      { label: '31+d', min: 31, max: Number.POSITIVE_INFINITY },
+    ];
+
+    const counts = buckets.map(bucket => ({ bucket: bucket.label, count: 0 }));
+
+    openOrders.forEach(order => {
+      const age = getOrderAgeDays(order);
+      if (age === null) return;
+      const bucketIndex = buckets.findIndex(bucket => age >= bucket.min && age <= bucket.max);
+      if (bucketIndex >= 0) {
+        counts[bucketIndex].count += 1;
+      }
+    });
+
+    return counts;
+  }, [openOrders]);
+
+  const longestPendingOrders = React.useMemo(() => {
+    return [...openOrders]
+      .map(order => ({ order, age: getOrderAgeDays(order) }))
+      .filter((item): item is { order: Order; age: number } => item.age !== null)
+      .sort((a, b) => (b.age ?? 0) - (a.age ?? 0))
+      .slice(0, 5);
+  }, [openOrders]);
+
+  const overdueOrderList = React.useMemo(() => {
+    const today = startOfDay(new Date());
+    return [...overdueOrders]
+      .map(order => {
+        const delivery = parseDate(order.deliveryDate);
+        const overdueDays = delivery ? Math.floor((today.getTime() - startOfDay(delivery).getTime()) / (24 * 60 * 60 * 1000)) : null;
+        return { order, overdueDays };
+      })
+      .filter((item): item is { order: Order; overdueDays: number } => item.overdueDays !== null)
+      .sort((a, b) => (b.overdueDays ?? 0) - (a.overdueDays ?? 0))
+      .slice(0, 5);
+  }, [overdueOrders]);
   const clientInsights = React.useMemo(() => {
     const today = startOfDay(new Date());
     const daysSince = (date: Date) => Math.floor((today.getTime() - startOfDay(date).getTime()) / (24 * 60 * 60 * 1000));
@@ -517,6 +571,105 @@ export const Analytics: React.FC = () => {
                 <p className="text-2xl font-bold text-foreground">{dueSoonOrders.length}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Order Ageing & Follow-up */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-lg">Pending Order Ageing</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pendingAgeData.every(item => item.count === 0) ? (
+                <p className="text-sm text-muted-foreground">No pending or running orders.</p>
+              ) : (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={pendingAgeData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="bucket" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="hsl(var(--primary))" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-card">
+            <CardHeader>
+              <CardTitle className="text-lg">Longest Pending Orders</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {longestPendingOrders.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No pending or running orders.</p>
+              ) : (
+                <div className="space-y-4">
+                  {longestPendingOrders.map(({ order, age }) => (
+                    <div key={order.id} className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <Link to={`/orders/${order.id}`} className="font-medium text-foreground hover:text-primary">
+                          {order.orderName || `Order #${order.number}`}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          {order.clientName || 'Unknown Client'} • Added {formatDate(order.addDate)}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <StatusBadge status={order.status} type="order" />
+                          <StatusBadge status={order.paymentStatus} type="payment" />
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold text-foreground">{age}d</p>
+                        <p className="text-xs text-muted-foreground">pending</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="shadow-card">
+          <CardHeader>
+            <CardTitle className="text-lg">Most Overdue Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {overdueOrderList.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No overdue orders right now.</p>
+            ) : (
+              <div className="space-y-4">
+                {overdueOrderList.map(({ order, overdueDays }) => {
+                  const outstanding = Math.max((order.totalAmount || 0) - (order.receivedPayment || 0), 0);
+                  return (
+                    <div key={order.id} className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <Link to={`/orders/${order.id}`} className="font-medium text-foreground hover:text-primary">
+                          {order.orderName || `Order #${order.number}`}
+                        </Link>
+                        <p className="text-xs text-muted-foreground">
+                          {order.clientName || 'Unknown Client'} • Due {formatDate(order.deliveryDate)}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <StatusBadge status={order.status} type="order" />
+                          <StatusBadge status={order.paymentStatus} type="payment" />
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-semibold text-destructive">{overdueDays}d</p>
+                        <p className="text-xs text-muted-foreground">
+                          {outstanding > 0 ? `${formatCurrency(outstanding)} due` : 'No balance'}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 
