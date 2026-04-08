@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,8 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { firebaseService, CreateClientData } from "@/lib/firebaseService";
+import { firebaseService, CreateClientData, Client } from "@/lib/firebaseService";
+import { INDIA_STATES_AND_UTS, getCitiesForState } from "@/lib/indiaLocations";
+import { INDUSTRY_FIELDS } from "@/lib/industryFields";
 import { useToast } from "@/hooks/use-toast";
+import { CityCombobox } from "@/components/common/CityCombobox";
+import { StateCombobox } from "@/components/common/StateCombobox";
+import { FieldCombobox } from "@/components/common/FieldCombobox";
 
 export const EditClient: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +20,8 @@ export const EditClient: React.FC = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingClient, setIsLoadingClient] = useState(true);
+  const [clients, setClients] = useState<Client[]>([]);
+  const prevStateRef = useRef<string | null>(null);
   const [formData, setFormData] = useState<CreateClientData>({
     name: '',
     mobileNumber: '',
@@ -30,6 +37,63 @@ export const EditClient: React.FC = () => {
       loadClient();
     }
   }, [id]);
+
+  useEffect(() => {
+    const loadClients = async () => {
+      try {
+        const data = await firebaseService.getAllClients();
+        setClients(data);
+      } catch (error) {
+        console.error('Failed to load clients for state/city options:', error);
+      }
+    };
+    loadClients();
+  }, []);
+
+  const availableStates = useMemo(() => {
+    const unique = new Set(INDIA_STATES_AND_UTS);
+    if (formData.state?.trim() && !unique.has(formData.state.trim())) {
+      unique.add(formData.state.trim());
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [formData.state]);
+
+  const availableFields = useMemo(() => {
+    const unique = new Set(INDUSTRY_FIELDS);
+    if (formData.field?.trim() && !unique.has(formData.field.trim())) {
+      unique.add(formData.field.trim());
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [formData.field]);
+
+  const availableCities = useMemo(() => {
+    const selectedState = formData.state?.trim() || '';
+    const baseCities = getCitiesForState(selectedState);
+    const clientCities = clients
+      .filter(client => {
+        if (!selectedState) return true;
+        return (client.state || '').trim().toLowerCase() === selectedState.toLowerCase();
+      })
+      .map(client => client.city?.trim())
+      .filter((value): value is string => Boolean(value));
+    const unique = new Set([...baseCities, ...clientCities]);
+    if (formData.city?.trim()) {
+      unique.add(formData.city.trim());
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [clients, formData.state, formData.city]);
+
+  useEffect(() => {
+    if (prevStateRef.current === null) {
+      prevStateRef.current = formData.state || '';
+      return;
+    }
+
+    if (prevStateRef.current !== (formData.state || '')) {
+      setFormData(prev => ({ ...prev, city: '' }));
+      prevStateRef.current = formData.state || '';
+    }
+  }, [formData.state]);
 
   const loadClient = async () => {
     try {
@@ -162,22 +226,23 @@ export const EditClient: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="city">City</Label>
-                  <Input
+                  <CityCombobox
                     id="city"
-                    name="city"
                     value={formData.city}
-                    onChange={handleInputChange}
-                    placeholder="Enter city"
+                    options={availableCities}
+                    onChange={(value) => setFormData(prev => ({ ...prev, city: value }))}
+                    placeholder={formData.state ? "Select city" : "Select state first"}
+                    disabled={!formData.state}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="state">State</Label>
-                  <Input
+                  <StateCombobox
                     id="state"
-                    name="state"
-                    value={formData.state}
-                    onChange={handleInputChange}
-                    placeholder="Enter state"
+                    value={formData.state || ''}
+                    options={availableStates}
+                    onChange={(value) => setFormData(prev => ({ ...prev, state: value }))}
+                    placeholder="Select state"
                   />
                 </div>
               </div>
@@ -185,12 +250,12 @@ export const EditClient: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="field">Field</Label>
-                  <Input
+                  <FieldCombobox
                     id="field"
-                    name="field"
-                    value={formData.field}
-                    onChange={handleInputChange}
-                    placeholder="Enter field / industry"
+                    value={formData.field || ''}
+                    options={availableFields}
+                    onChange={(value) => setFormData(prev => ({ ...prev, field: value }))}
+                    placeholder="Select field"
                   />
                 </div>
                 <div className="space-y-2">

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,10 @@ import { firebaseService, Client } from "@/lib/firebaseService";
 import { MobileNavigation } from "@/components/common/MobileNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { getCitiesForState } from "@/lib/indiaLocations";
+import { CityCombobox } from "@/components/common/CityCombobox";
+import { FieldCombobox } from "@/components/common/FieldCombobox";
+import { INDUSTRY_FIELDS } from "@/lib/industryFields";
 
 export const ClientManagement: React.FC = () => {
   const { user } = useAuth();
@@ -18,7 +22,7 @@ export const ClientManagement: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [cityFilter, setCityFilter] = useState('');
-  const [stateFilter, setStateFilter] = useState('');
+  const [stateFilter, setStateFilter] = useState('all');
   const [fieldFilter, setFieldFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
 
@@ -60,6 +64,46 @@ export const ClientManagement: React.FC = () => {
     }
   };
 
+  const availableStates = useMemo(() => {
+    const unique = new Set(
+      clients
+        .map(client => client.state?.trim())
+        .filter((value): value is string => Boolean(value))
+    );
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [clients]);
+
+  const availableCities = useMemo(() => {
+    const selectedState = stateFilter === 'all' ? '' : stateFilter.trim().toLowerCase();
+    const baseCities = selectedState ? getCitiesForState(stateFilter) : [];
+    const clientCities = clients
+      .filter(client => {
+        if (!selectedState) return true;
+        return (client.state || '').trim().toLowerCase() === selectedState;
+      })
+      .map(client => client.city?.trim())
+      .filter((value): value is string => Boolean(value));
+    const unique = new Set([...baseCities, ...clientCities]);
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [clients, stateFilter]);
+
+  const availableFields = useMemo(() => {
+    const unique = new Set(INDUSTRY_FIELDS);
+    if (fieldFilter?.trim()) {
+      unique.add(fieldFilter.trim());
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [fieldFilter]);
+
+  useEffect(() => {
+    if (!cityFilter.trim()) return;
+    const normalized = cityFilter.trim().toLowerCase();
+    const matches = availableCities.some(city => city.toLowerCase().includes(normalized));
+    if (!matches) {
+      setCityFilter('');
+    }
+  }, [stateFilter, availableCities, cityFilter]);
+
   const filteredClients = clients.filter(client => {
     const search = searchTerm.trim().toLowerCase();
     const matchesSearch = !search || [
@@ -76,8 +120,8 @@ export const ClientManagement: React.FC = () => {
 
     const matchesCity = !cityFilter.trim() ||
       (client.city || '').toLowerCase().includes(cityFilter.trim().toLowerCase());
-    const matchesState = !stateFilter.trim() ||
-      (client.state || '').toLowerCase().includes(stateFilter.trim().toLowerCase());
+    const matchesState = stateFilter === 'all' ||
+      (client.state || '').trim().toLowerCase() === stateFilter.trim().toLowerCase();
     const matchesField = !fieldFilter.trim() ||
       (client.field || '').toLowerCase().includes(fieldFilter.trim().toLowerCase());
     const matchesType = typeFilter === 'all' ||
@@ -126,20 +170,36 @@ export const ClientManagement: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              <Input
-                placeholder="Filter by city"
+              <Select value={stateFilter} onValueChange={setStateFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All States</SelectItem>
+                  {availableStates.map(state => (
+                    <SelectItem key={state} value={state}>
+                      {state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <CityCombobox
+                id="cityFilter"
                 value={cityFilter}
-                onChange={(e) => setCityFilter(e.target.value)}
+                options={availableCities}
+                onChange={setCityFilter}
+                placeholder="Filter by city"
+                allowAll
+                allLabel="All cities"
               />
-              <Input
-                placeholder="Filter by state"
-                value={stateFilter}
-                onChange={(e) => setStateFilter(e.target.value)}
-              />
-              <Input
-                placeholder="Filter by field"
+              <FieldCombobox
+                id="fieldFilter"
                 value={fieldFilter}
-                onChange={(e) => setFieldFilter(e.target.value)}
+                options={availableFields}
+                onChange={setFieldFilter}
+                placeholder="Filter by field"
+                allowAll
+                allLabel="All fields"
               />
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger>
