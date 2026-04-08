@@ -25,6 +25,9 @@ export interface Client {
   mobileNumber: string;
   address: string;
   city: string;
+  state?: string;
+  field?: string;
+  clientType?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -56,6 +59,9 @@ export interface CreateClientData {
   mobileNumber: string;
   address: string;
   city: string;
+  state?: string;
+  field?: string;
+  clientType?: string;
 }
 
 export interface CreateOrderData {

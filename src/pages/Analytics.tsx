@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { TrendingUp, FileText, DollarSign, Package, Users, Wallet, AlertTriangle, Clock, BadgePercent } from "lucide-react";
@@ -11,6 +11,7 @@ import { MobileNavigation } from "@/components/common/MobileNavigation";
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--muted))', 'hsl(var(--destructive))'];
 const DEFAULT_INACTIVITY_DAYS = 45;
+const INACTIVITY_OPTIONS = [15, 30, 45, 60, 75];
 const ACTIVE_DAYS = 30;
 const DUE_SOON_DAYS = 7;
 
@@ -174,8 +175,8 @@ export const Analytics: React.FC = () => {
 
   const handleInactivityDaysChange = (value: string) => {
     const parsed = parseInt(value, 10);
-    if (!Number.isNaN(parsed)) {
-      setInactivityDays(Math.max(1, parsed));
+    if (!Number.isNaN(parsed) && INACTIVITY_OPTIONS.includes(parsed)) {
+      setInactivityDays(parsed);
     }
   };
 
@@ -315,8 +316,7 @@ export const Analytics: React.FC = () => {
 
     const inactiveClients = [...withOrders]
       .filter(stat => stat.lastOrderDate && daysSince(stat.lastOrderDate) > inactivityDays)
-      .sort((a, b) => (a.lastOrderDate?.getTime() || 0) - (b.lastOrderDate?.getTime() || 0))
-      .slice(0, 8);
+      .sort((a, b) => (a.lastOrderDate?.getTime() || 0) - (b.lastOrderDate?.getTime() || 0));
 
     const activeClients = withOrders.filter(stat => stat.lastOrderDate && daysSince(stat.lastOrderDate) <= ACTIVE_DAYS).length;
     const repeatClients = withOrders.filter(stat => stat.repeatCustomer).length;
@@ -530,30 +530,6 @@ export const Analytics: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-
-        {/* Client Filters */}
-        <Card className="shadow-card">
-          <CardHeader>
-            <CardTitle className="text-lg">Client Filters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-              <div>
-                <p className="text-sm text-muted-foreground">Inactive Days Threshold</p>
-                <Input
-                  type="number"
-                  min={1}
-                  value={inactivityDays}
-                  onChange={(event) => handleInactivityDaysChange(event.target.value)}
-                  className="mt-2"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground md:col-span-2">
-                Clients are marked inactive when they have no orders in the last {inactivityDays} days.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Operational Alerts */}
         <Card className="shadow-card">
@@ -941,10 +917,31 @@ export const Analytics: React.FC = () => {
           </Card>
 
           <Card className="shadow-card">
-            <CardHeader>
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="sm:w-52">
+                <p className="text-xs text-muted-foreground">Inactive Days Threshold</p>
+                <Select
+                  value={String(inactivityDays)}
+                  onValueChange={handleInactivityDaysChange}
+                >
+                  <SelectTrigger className="mt-2 h-9">
+                    <SelectValue placeholder="Select days" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INACTIVITY_OPTIONS.map(option => (
+                      <SelectItem key={option} value={String(option)}>
+                        {option}+ days
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <CardTitle className="text-lg">Inactive Clients ({inactivityDays}+ Days)</CardTitle>
             </CardHeader>
             <CardContent>
+              <p className="text-xs text-muted-foreground mb-3">
+                Clients are marked inactive when they have no orders in the last {inactivityDays} days.
+              </p>
               {clientInsights.inactiveClients.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No inactive clients found.</p>
               ) : (

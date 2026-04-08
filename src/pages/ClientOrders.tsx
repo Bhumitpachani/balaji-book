@@ -108,10 +108,26 @@ export const ClientOrders: React.FC = () => {
                     <Phone className="w-3 h-3" />
                     <span>{client.mobileNumber}</span>
                   </div>
-                  {client.address && (
+                  {(client.address || client.city || client.state) && (
                     <div className="flex items-start gap-2 text-sm text-muted-foreground">
                       <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                      <span>{client.address}, {client.city}</span>
+                      <span>
+                        {[client.address, client.city, client.state].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
+                  )}
+                  {(client.field || client.clientType) && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {client.clientType && (
+                        <Badge variant="secondary" className="text-xs">
+                          {client.clientType}
+                        </Badge>
+                      )}
+                      {client.field && (
+                        <Badge variant="outline" className="text-xs">
+                          {client.field}
+                        </Badge>
+                      )}
                     </div>
                   )}
                 </div>

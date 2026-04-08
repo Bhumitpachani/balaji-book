@@ -98,10 +98,20 @@ export const EditOrder: React.FC = () => {
     }
   };
 
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-    client.mobileNumber.includes(clientSearch)
-  );
+  const filteredClients = clients.filter(client => {
+    const search = clientSearch.trim().toLowerCase();
+    if (!search) return true;
+    return [
+      client.name,
+      client.mobileNumber,
+      client.city,
+      client.state,
+      client.field,
+      client.clientType
+    ]
+      .filter(Boolean)
+      .some(value => value!.toLowerCase().includes(search));
+  });
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -289,8 +299,17 @@ export const EditOrder: React.FC = () => {
                       <div className="flex-1">
                         <p className="font-medium text-foreground">{selectedClient.name}</p>
                         <p className="text-sm text-muted-foreground">{selectedClient.mobileNumber}</p>
-                        {selectedClient.address && (
-                          <p className="text-sm text-muted-foreground">{selectedClient.address}</p>
+                        {(selectedClient.address || selectedClient.city || selectedClient.state) && (
+                          <p className="text-sm text-muted-foreground">
+                            {[selectedClient.address, selectedClient.city, selectedClient.state]
+                              .filter(Boolean)
+                              .join(', ')}
+                          </p>
+                        )}
+                        {(selectedClient.field || selectedClient.clientType) && (
+                          <p className="text-xs text-muted-foreground">
+                            {[selectedClient.clientType, selectedClient.field].filter(Boolean).join(' • ')}
+                          </p>
                         )}
                       </div>
                       <Badge variant="secondary">Selected</Badge>

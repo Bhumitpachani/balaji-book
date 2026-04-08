@@ -6,6 +6,9 @@ export interface Client {
   mobileNumber: string;
   address: string;
   city: string;
+  state?: string;
+  field?: string;
+  clientType?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -39,6 +42,9 @@ export interface CreateClientData {
   mobileNumber: string;
   address: string;
   city: string;
+  state?: string;
+  field?: string;
+  clientType?: string;
 }
 
 export interface CreateOrderData {

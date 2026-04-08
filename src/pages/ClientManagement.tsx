@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Eye, Edit, Trash2, MapPin, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { firebaseService, Client } from "@/lib/firebaseService";
@@ -16,6 +17,10 @@ export const ClientManagement: React.FC = () => {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
+  const [stateFilter, setStateFilter] = useState('');
+  const [fieldFilter, setFieldFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
 
   useEffect(() => {
     loadClients();
@@ -55,10 +60,31 @@ export const ClientManagement: React.FC = () => {
     }
   };
 
-  const filteredClients = clients.filter(client => 
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.mobileNumber.includes(searchTerm)
-  );
+  const filteredClients = clients.filter(client => {
+    const search = searchTerm.trim().toLowerCase();
+    const matchesSearch = !search || [
+      client.name,
+      client.mobileNumber,
+      client.address,
+      client.city,
+      client.state,
+      client.field,
+      client.clientType
+    ]
+      .filter(Boolean)
+      .some(value => value!.toLowerCase().includes(search));
+
+    const matchesCity = !cityFilter.trim() ||
+      (client.city || '').toLowerCase().includes(cityFilter.trim().toLowerCase());
+    const matchesState = !stateFilter.trim() ||
+      (client.state || '').toLowerCase().includes(stateFilter.trim().toLowerCase());
+    const matchesField = !fieldFilter.trim() ||
+      (client.field || '').toLowerCase().includes(fieldFilter.trim().toLowerCase());
+    const matchesType = typeFilter === 'all' ||
+      (client.clientType || '').toLowerCase() === typeFilter.toLowerCase();
+
+    return matchesSearch && matchesCity && matchesState && matchesField && matchesType;
+  });
 
   if (isLoading) {
     return (
@@ -88,15 +114,43 @@ export const ClientManagement: React.FC = () => {
       <div className="p-4 space-y-4">
         {/* Search */}
         <Card className="shadow-card">
-          <CardContent className="p-4">
+          <CardContent className="p-4 space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
               <Input
-                placeholder="Search by name or mobile number..."
+                placeholder="Search by name, mobile, city, state, field, or type..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <Input
+                placeholder="Filter by city"
+                value={cityFilter}
+                onChange={(e) => setCityFilter(e.target.value)}
+              />
+              <Input
+                placeholder="Filter by state"
+                value={stateFilter}
+                onChange={(e) => setStateFilter(e.target.value)}
+              />
+              <Input
+                placeholder="Filter by field"
+                value={fieldFilter}
+                onChange={(e) => setFieldFilter(e.target.value)}
+              />
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="B2B">B2B</SelectItem>
+                  <SelectItem value="B2C">B2C</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -129,13 +183,32 @@ export const ClientManagement: React.FC = () => {
                     </div>
 
                     {/* Address */}
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <div className="text-sm">
-                        <p className="text-foreground">{client.address}</p>
-                        <p className="text-muted-foreground">{client.city}</p>
+                    {(client.address || client.city || client.state) && (
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                        <div className="text-sm">
+                          {client.address && <p className="text-foreground">{client.address}</p>}
+                          <p className="text-muted-foreground">
+                            {[client.city, client.state].filter(Boolean).join(', ')}
+                          </p>
+                        </div>
                       </div>
-                    </div>
+                    )}
+
+                    {(client.field || client.clientType) && (
+                      <div className="flex flex-wrap gap-2">
+                        {client.clientType && (
+                          <Badge variant="secondary" className="text-xs">
+                            {client.clientType}
+                          </Badge>
+                        )}
+                        {client.field && (
+                          <Badge variant="outline" className="text-xs">
+                            {client.field}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex items-center justify-between pt-3 border-t border-border">

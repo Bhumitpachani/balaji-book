@@ -77,10 +77,20 @@ export const CreateOrder: React.FC = () => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const filteredClients = clients.filter(client => 
-    client.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
-    client.mobileNumber.includes(clientSearch)
-  );
+  const filteredClients = clients.filter(client => {
+    const search = clientSearch.trim().toLowerCase();
+    if (!search) return true;
+    return [
+      client.name,
+      client.mobileNumber,
+      client.city,
+      client.state,
+      client.field,
+      client.clientType
+    ]
+      .filter(Boolean)
+      .some(value => value!.toLowerCase().includes(search));
+  });
 
   const selectClient = (client: Client) => {
     setSelectedClient(client);
@@ -201,6 +211,18 @@ export const CreateOrder: React.FC = () => {
                         <div>
                           <p className="font-medium">{selectedClient.name}</p>
                           <p className="text-sm text-muted-foreground">{selectedClient.mobileNumber}</p>
+                          {(selectedClient.address || selectedClient.city || selectedClient.state) && (
+                            <p className="text-xs text-muted-foreground">
+                              {[selectedClient.address, selectedClient.city, selectedClient.state]
+                                .filter(Boolean)
+                                .join(', ')}
+                            </p>
+                          )}
+                          {(selectedClient.field || selectedClient.clientType) && (
+                            <p className="text-xs text-muted-foreground">
+                              {[selectedClient.clientType, selectedClient.field].filter(Boolean).join(' • ')}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <Badge variant="outline">Selected</Badge>
