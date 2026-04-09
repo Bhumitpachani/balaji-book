@@ -14,5 +14,15 @@ export const INDUSTRY_FIELDS = [
   "Precast products",
   "Heavy machinery manufacturer",
   "Staircase Fabricators",
-  "Shed & PEB Fabricators"
+  "Shed & PEB Fabricators",
+  "Bus body",
+  "Quarry plant",
+  "Facade work",
+  "Kolawala",
+  "Material handling equipment",
+  "Petrolpump contractors",
+  "Semi ghanti",
+  "Textile machine manufacturers",
+  "Truck tipper",
+  "Steel traders"
 ];
