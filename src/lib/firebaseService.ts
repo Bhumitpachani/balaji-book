@@ -79,10 +79,38 @@ export interface CreateOrderData {
   clientMobileNumber: string;
   clientAddress?: string;
   clientCity?: string;
+  imageUrls?: string[];
   files?: File[];
 }
 
 class FirebaseService {
+  private async uploadOrderFiles(files: File[]): Promise<string[]> {
+    const uploadedUrls: string[] = [];
+
+    for (const file of files) {
+      const timestamp = Date.now();
+      const fileName = `orders/${timestamp}_${file.name}`;
+      const storageRef = ref(storage, fileName);
+
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      uploadedUrls.push(downloadURL);
+    }
+
+    return uploadedUrls;
+  }
+
+  private async deleteFilesByUrl(urls: string[]): Promise<void> {
+    for (const url of urls) {
+      try {
+        const fileRef = ref(storage, url);
+        await deleteObject(fileRef);
+      } catch (error) {
+        console.error('Error deleting file:', error);
+      }
+    }
+  }
+
   // Client methods
   async createClient(data: CreateClientData): Promise<Client> {
     const clientData = {
@@ -162,20 +190,9 @@ class FirebaseService {
 
   // Order methods
   async createOrder(data: CreateOrderData): Promise<Order> {
-    const imageUrls: string[] = [];
-    
-    // Upload images if provided
-    if (data.files && data.files.length > 0) {
-      for (const file of data.files) {
-        const timestamp = Date.now();
-        const fileName = `orders/${timestamp}_${file.name}`;
-        const storageRef = ref(storage, fileName);
-        
-        await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
-        imageUrls.push(downloadURL);
-      }
-    }
+    const imageUrls = data.files && data.files.length > 0
+      ? await this.uploadOrderFiles(data.files)
+      : [];
 
     // Get next sequential order number
     const nextOrderNumber = await this.getNextOrderNumber();
@@ -214,32 +231,39 @@ class FirebaseService {
   async updateOrder(id: string, data: Partial<CreateOrderData>): Promise<Order> {
     const orderRef = doc(db, 'orders', id);
     const updateData: any = { ...data, updatedAt: Timestamp.now() };
-    
-    // Handle image uploads if files are provided
-    if (data.files && data.files.length > 0) {
-      const imageUrls: string[] = [];
-      
-      for (const file of data.files) {
-        const timestamp = Date.now();
-        const fileName = `orders/${timestamp}_${file.name}`;
-        const storageRef = ref(storage, fileName);
-        
-        await uploadBytes(storageRef, file);
-        const downloadURL = await getDownloadURL(storageRef);
-        imageUrls.push(downloadURL);
-      }
-      
-      // Get existing images
-      const existingOrder = await getDoc(orderRef);
-      const existingImages = existingOrder.data()?.imageUrls || [];
-      
-      updateData.imageUrls = [...existingImages, ...imageUrls];
+
+    const existingOrder = await getDoc(orderRef);
+    if (!existingOrder.exists()) {
+      throw new Error('Order not found');
     }
-    
+
+    const existingImages = (existingOrder.data()?.imageUrls || []) as string[];
+    const retainedImages = data.imageUrls ? [...data.imageUrls] : existingImages;
+    const removedImages = existingImages.filter(url => !retainedImages.includes(url));
+    let uploadedImages: string[] = [];
+
+    try {
+      if (data.files && data.files.length > 0) {
+        uploadedImages = await this.uploadOrderFiles(data.files);
+      }
+
+      updateData.imageUrls = [...retainedImages, ...uploadedImages];
+      delete updateData.files;
+
+      await updateDoc(orderRef, updateData);
+    } catch (error) {
+      if (uploadedImages.length > 0) {
+        await this.deleteFilesByUrl(uploadedImages);
+      }
+      throw error;
+    }
+
     // Remove files property before updating
     delete updateData.files;
-    
-    await updateDoc(orderRef, updateData);
+
+    if (removedImages.length > 0) {
+      await this.deleteFilesByUrl(removedImages);
+    }
 
     const updatedDoc = await getDoc(orderRef);
     return {
@@ -282,16 +306,7 @@ class FirebaseService {
     const orderDoc = await getDoc(doc(db, 'orders', id));
     if (orderDoc.exists()) {
       const imageUrls = orderDoc.data().imageUrls || [];
-      
-      // Delete images from storage
-      for (const url of imageUrls) {
-        try {
-          const imageRef = ref(storage, url);
-          await deleteObject(imageRef);
-        } catch (error) {
-          console.error('Error deleting image:', error);
-        }
-      }
+      await this.deleteFilesByUrl(imageUrls);
     }
     
     await deleteDoc(doc(db, 'orders', id));

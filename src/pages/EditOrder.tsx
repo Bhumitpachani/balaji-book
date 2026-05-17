@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Upload, X, Search, User, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, X, Search, User, Loader2, ExternalLink } from "lucide-react";
 import { firebaseService, Client, Order } from "@/lib/firebaseService";
 import { useToast } from "@/hooks/use-toast";
+import { getFileIcon, getFileName, getFileType } from "@/lib/fileUtils";
 
 export const EditOrder: React.FC = () => {
   const navigate = useNavigate();
@@ -23,6 +24,7 @@ export const EditOrder: React.FC = () => {
   const [clientSearch, setClientSearch] = useState('');
   const [showClientDropdown, setShowClientDropdown] = useState(false);
   const [order, setOrder] = useState<Order | null>(null);
+  const [existingFiles, setExistingFiles] = useState<string[]>([]);
   
   const [formData, setFormData] = useState({
     orderName: '',
@@ -50,6 +52,7 @@ export const EditOrder: React.FC = () => {
       
       if (foundOrder) {
         setOrder(foundOrder);
+        setExistingFiles(foundOrder.imageUrls || []);
         setOrderNumber(foundOrder.number || '');
         setFormData({
           orderName: foundOrder.orderName,
@@ -122,10 +125,15 @@ export const EditOrder: React.FC = () => {
     if (files) {
       setSelectedFiles(prev => [...prev, ...Array.from(files)]);
     }
+    event.target.value = '';
   };
 
   const removeFile = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeExistingFile = (index: number) => {
+    setExistingFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleClientSelect = (client: Client) => {
@@ -164,6 +172,7 @@ export const EditOrder: React.FC = () => {
         clientMobileNumber: selectedClient.mobileNumber,
         clientAddress: selectedClient.address,
         clientCity: selectedClient.city,
+        imageUrls: existingFiles,
       };
 
       if (selectedFiles.length > 0) {
@@ -476,43 +485,106 @@ export const EditOrder: React.FC = () => {
                   </div>
                   
                   {/* Current Files */}
-                  {order?.imageUrls && order.imageUrls.length > 0 && (
+                  {existingFiles.length > 0 && (
                     <div className="space-y-2">
                       <Label className="text-sm text-muted-foreground">Current Files</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {order.imageUrls.map((url, index) => (
-                          <div key={index} className="relative">
-                            <img 
-                              src={url} 
-                              alt={`Order file ${index + 1}`}
-                              className="w-full h-24 object-cover rounded-lg cursor-pointer"
-                              onClick={() => window.open(url, '_blank')}
-                            />
-                          </div>
-                        ))}
+                      <div className="space-y-2">
+                        {existingFiles.map((url, index) => {
+                          const fileType = getFileType(url);
+                          const FileIcon = getFileIcon(fileType);
+
+                          return (
+                            <div key={`${url}-${index}`} className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                                <FileIcon className="h-5 w-5 text-primary" />
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-sm font-medium text-foreground">
+                                  {getFileName(url)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  Existing {fileType === 'other' ? 'file' : fileType}
+                                </p>
+                              </div>
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => window.open(url, '_blank')}
+                                className="h-8 w-8 p-0"
+                                title="Open file"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeExistingFile(index)}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                title="Remove file"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
-                  
+
+                  {order?.imageUrls && order.imageUrls.length > 0 && existingFiles.length === 0 && (
+                    <div className="rounded-lg border border-dashed border-border p-3">
+                      <p className="text-sm text-muted-foreground">
+                        All existing files will be removed when you save this order.
+                      </p>
+                    </div>
+                  )}
+
                   {/* New Files to Upload */}
                   {selectedFiles.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="text-sm text-muted-foreground">New Images to Upload</Label>
+                      <Label className="text-sm text-muted-foreground">New Files to Upload</Label>
                       {selectedFiles.map((file, index) => (
-                        <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                          <span className="text-sm flex-1">{file.name}</span>
+                        <div key={`${file.name}-${index}`} className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
+                            <Upload className="h-5 w-5 text-accent" />
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
                             onClick={() => removeFile(index)}
-                            className="h-6 w-6 p-0"
+                            className="h-8 w-8 p-0"
                           >
-                            <X className="w-4 h-4" />
+                            <X className="h-4 w-4" />
                           </Button>
                         </div>
                       ))}
                     </div>
+                  )}
+
+                  {existingFiles.length > 0 && selectedFiles.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Saving will keep the current files shown above and also upload the new files listed below.
+                    </p>
+                  )}
+
+                  {existingFiles.length === 0 && selectedFiles.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Saving will replace removed files with only the new uploads you selected.
+                    </p>
                   )}
                 </div>
               </div>
