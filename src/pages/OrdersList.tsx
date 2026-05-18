@@ -12,6 +12,7 @@ import { PaymentModal } from "@/components/common/PaymentModal";
 import { MobileNavigation } from "@/components/common/MobileNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { formatMetricNumber, isEstimatedOrder } from "@/lib/orderMetrics";
 
 export const OrdersList: React.FC = () => {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ export const OrdersList: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
+  const formatWeight = (value: number) => formatMetricNumber(value);
 
   // Load filters from localStorage on mount
   useEffect(() => {
@@ -282,6 +284,7 @@ export const OrdersList: React.FC = () => {
           ) : (
             filteredOrders.map((order) => {
               const overdue = isOverdue(order);
+              const estimatedMode = isEstimatedOrder(order);
               return (
                 <Card
                   key={order.id}
@@ -350,8 +353,22 @@ export const OrdersList: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Payment */}
-                      <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-4 rounded-lg border border-primary/20">
+                      {/* Payment / Analysis */}
+                      {estimatedMode ? (
+                        <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-4 rounded-lg border border-primary/20">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Estimated Amount</p>
+                              <p className="text-lg font-bold">â‚¹{(order.estimatedAmount || 0).toLocaleString('en-IN')}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Estimated Weight</p>
+                              <p className="text-lg font-bold text-success">{formatWeight(order.estimatedWeight || 0)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-4 rounded-lg border border-primary/20">
                         <div className="grid grid-cols-2 gap-4">
                           <div>
                             <p className="text-xs text-muted-foreground mb-1">Total</p>
@@ -373,7 +390,8 @@ export const OrdersList: React.FC = () => {
                           <span className="text-xs text-muted-foreground">Payment:</span>
                           <StatusBadge status={order.paymentStatus} type="payment" />
                         </div>
-                      </div>
+                        </div>
+                      )}
 
                       {/* Actions */}
                       <div className="flex gap-2 flex-wrap">
@@ -389,7 +407,7 @@ export const OrdersList: React.FC = () => {
                             </Link>
                           </Button>
                         )}
-                        {user?.role === 'admin' && order.totalAmount > order.receivedPayment && (
+                        {user?.role === 'admin' && !estimatedMode && order.totalAmount > order.receivedPayment && (
                           <Button
                             onClick={() => { setSelectedOrder(order); setIsPaymentModalOpen(true); }}
                             className="flex-1"

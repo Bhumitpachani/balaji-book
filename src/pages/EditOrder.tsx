@@ -11,6 +11,7 @@ import { ArrowLeft, Upload, X, Search, User, Loader2, ExternalLink } from "lucid
 import { firebaseService, Client, Order } from "@/lib/firebaseService";
 import { useToast } from "@/hooks/use-toast";
 import { getFileIcon, getFileName, getFileType } from "@/lib/fileUtils";
+import { isEstimatedOrder } from "@/lib/orderMetrics";
 
 export const EditOrder: React.FC = () => {
   const navigate = useNavigate();
@@ -33,9 +34,9 @@ export const EditOrder: React.FC = () => {
     addDate: new Date().toISOString().split('T')[0],
     deliveryDate: '',
     type: 'Inquiry',
-    paymentStatus: 'Unpaid',
-    totalAmount: 0,
-    receivedPayment: 0,
+    analysisMode: 'legacy-payment' as 'legacy-payment' | 'estimate',
+    estimatedAmount: 0,
+    estimatedWeight: 0,
   });
   const [orderNumber, setOrderNumber] = useState<string>('');
 
@@ -51,6 +52,7 @@ export const EditOrder: React.FC = () => {
       const foundOrder = await firebaseService.getOrderById(id!);
       
       if (foundOrder) {
+        const estimatedMode = isEstimatedOrder(foundOrder);
         setOrder(foundOrder);
         setExistingFiles(foundOrder.imageUrls || []);
         setOrderNumber(foundOrder.number || '');
@@ -61,9 +63,9 @@ export const EditOrder: React.FC = () => {
           addDate: new Date(foundOrder.addDate).toISOString().split('T')[0],
           deliveryDate: new Date(foundOrder.deliveryDate).toISOString().split('T')[0],
           type: foundOrder.type,
-          paymentStatus: foundOrder.paymentStatus,
-          totalAmount: foundOrder.totalAmount,
-          receivedPayment: foundOrder.receivedPayment,
+          analysisMode: estimatedMode ? 'estimate' : 'legacy-payment',
+          estimatedAmount: foundOrder.estimatedAmount || 0,
+          estimatedWeight: foundOrder.estimatedWeight || 0,
         });
         
         const allClients = await firebaseService.getAllClients();
@@ -166,6 +168,9 @@ export const EditOrder: React.FC = () => {
     try {
       const orderData: any = {
         ...formData,
+        analysisMode: formData.analysisMode === 'estimate' || formData.estimatedAmount > 0 || formData.estimatedWeight > 0
+          ? 'estimate'
+          : 'legacy-payment',
         number: orderNumber,
         clientId: selectedClient.id,
         clientName: selectedClient.name,
@@ -414,48 +419,31 @@ export const EditOrder: React.FC = () => {
                 </div>
               </div>
 
-              {/* Row 3: Payment */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Row 3: Analysis */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="paymentStatus">Payment Status</Label>
-                  <Select
-                    value={formData.paymentStatus}
-                    onValueChange={(value) => handleInputChange('paymentStatus', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Unpaid">Unpaid</SelectItem>
-                      <SelectItem value="Paid">Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="totalAmount">Total Amount *</Label>
+                  <Label htmlFor="estimatedAmount">Estimated Amount *</Label>
                   <Input
-                    id="totalAmount"
+                    id="estimatedAmount"
                     type="number"
                     min="0"
                     step="0.01"
-                    value={formData.totalAmount}
-                    onChange={(e) => handleInputChange('totalAmount', parseFloat(e.target.value) || 0)}
+                    value={formData.estimatedAmount}
+                    onChange={(e) => handleInputChange('estimatedAmount', parseFloat(e.target.value) || 0)}
                     placeholder="0.00"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="receivedPayment">Received Payment</Label>
+                  <Label htmlFor="estimatedWeight">Estimated Weight</Label>
                   <Input
-                    id="receivedPayment"
+                    id="estimatedWeight"
                     type="number"
                     min="0"
                     step="0.01"
-                    max={formData.totalAmount}
-                    value={formData.receivedPayment}
-                    onChange={(e) => handleInputChange('receivedPayment', parseFloat(e.target.value) || 0)}
+                    value={formData.estimatedWeight}
+                    onChange={(e) => handleInputChange('estimatedWeight', parseFloat(e.target.value) || 0)}
                     placeholder="0.00"
                   />
                 </div>

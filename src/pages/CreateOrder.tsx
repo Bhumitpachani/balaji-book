@@ -27,9 +27,8 @@ export const CreateOrder: React.FC = () => {
     addDate: new Date().toISOString().split('T')[0],
     deliveryDate: '',
     type: 'Inquiry',
-    paymentStatus: 'Unpaid',
-    totalAmount: 0,
-    receivedPayment: 0,
+    estimatedAmount: 0,
+    estimatedWeight: 0,
   });
   const [orderNumber, setOrderNumber] = useState<string>('');
 
@@ -115,6 +114,7 @@ export const CreateOrder: React.FC = () => {
     try {
       const orderData = {
         ...formData,
+        analysisMode: 'estimate' as const,
         orderName: selectedClient.name,
         clientId: selectedClient.id,
         clientName: selectedClient.name,
@@ -258,15 +258,15 @@ export const CreateOrder: React.FC = () => {
                 />
               </div>
 
-              {/* Payment Fields */}
+              {/* Analysis Fields */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="totalAmount">Total Amount *</Label>
+                  <Label htmlFor="estimatedAmount">Estimated Amount *</Label>
                   <Input
-                    id="totalAmount"
+                    id="estimatedAmount"
                     type="number"
-                    value={formData.totalAmount}
-                    onChange={(e) => handleInputChange('totalAmount', parseFloat(e.target.value) || 0)}
+                    value={formData.estimatedAmount}
+                    onChange={(e) => handleInputChange('estimatedAmount', parseFloat(e.target.value) || 0)}
                     placeholder="0"
                     min="0"
                     step="0.01"
@@ -274,15 +274,14 @@ export const CreateOrder: React.FC = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="receivedPayment">Received Payment</Label>
+                  <Label htmlFor="estimatedWeight">Estimated Weight</Label>
                   <Input
-                    id="receivedPayment"
+                    id="estimatedWeight"
                     type="number"
-                    value={formData.receivedPayment}
-                    onChange={(e) => handleInputChange('receivedPayment', parseFloat(e.target.value) || 0)}
+                    value={formData.estimatedWeight}
+                    onChange={(e) => handleInputChange('estimatedWeight', parseFloat(e.target.value) || 0)}
                     placeholder="0"
                     min="0"
-                    max={formData.totalAmount}
                     step="0.01"
                   />
                 </div>
@@ -314,20 +313,6 @@ export const CreateOrder: React.FC = () => {
                     <SelectItem value="Running">Running</SelectItem>
                     <SelectItem value="Done">Done</SelectItem>
                     <SelectItem value="Delivered">Delivered</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Payment Status */}
-              <div className="space-y-2">
-                <Label>Payment Status</Label>
-                <Select value={formData.paymentStatus} onValueChange={(value) => handleInputChange('paymentStatus', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Unpaid">Unpaid</SelectItem>
-                    <SelectItem value="Paid">Paid</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

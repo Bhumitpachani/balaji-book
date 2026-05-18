@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { MobileNavigation } from '@/components/common/MobileNavigation';
 import { PWAInstallPrompt } from '@/components/common/PWAInstallPrompt';
@@ -89,6 +89,33 @@ export const AdminOrdersTable: React.FC = () => {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
+
+  const getVisiblePages = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const pages: Array<number | 'ellipsis-left' | 'ellipsis-right'> = [1];
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+
+    if (start > 2) {
+      pages.push('ellipsis-left');
+    }
+
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page);
+    }
+
+    if (end < totalPages - 1) {
+      pages.push('ellipsis-right');
+    }
+
+    pages.push(totalPages);
+    return pages;
+  };
+
+  const visiblePages = getVisiblePages();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-GB');
@@ -196,34 +223,34 @@ export const AdminOrdersTable: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6">
+    <div className="min-h-screen overflow-x-hidden bg-background">
+      <div className="container mx-auto max-w-full px-4 py-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-          <div className="flex items-center gap-4 mb-4 md:mb-0">
+        <div className="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
             <Link to="/admin">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto">
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Dashboard
               </Button>
             </Link>
-            <div>
-              <h1 className="text-2xl font-bold">Orders Table</h1>
-              <p className="text-muted-foreground">
+            <div className="min-w-0">
+              <h1 className="truncate text-2xl font-bold">Orders Table</h1>
+              <p className="text-sm text-muted-foreground">
                 Showing {filteredOrders.length} of {orders.length} orders
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <Button
               onClick={exportToExcel}
               disabled={isExporting || filteredOrders.length === 0}
-              className="flex items-center gap-2"
+              className="flex w-full items-center justify-center gap-2 sm:w-auto"
             >
               <Download className="h-4 w-4" />
               {isExporting ? 'Exporting...' : 'Export Excel'}
             </Button>
-            <Button variant="outline" onClick={logout}>
+            <Button variant="outline" onClick={logout} className="w-full sm:w-auto">
               Logout
             </Button>
           </div>
@@ -234,7 +261,7 @@ export const AdminOrdersTable: React.FC = () => {
             <CardTitle className="text-lg">Filters</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col gap-4 lg:flex-row">
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -262,9 +289,9 @@ export const AdminOrdersTable: React.FC = () => {
           </CardContent>
         </Card>
         {/* Table - Desktop View */}
-        <Card className="hidden md:block">
+        <Card className="hidden overflow-hidden lg:block">
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
+            <div className="max-w-full overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -337,7 +364,7 @@ export const AdminOrdersTable: React.FC = () => {
           </CardContent>
         </Card>
         {/* Mobile Cards View */}
-        <div className="md:hidden space-y-4">
+        <div className="space-y-4 lg:hidden">
           {currentOrders.map((order) => (
             <Card key={order.id}>
               <CardContent className="p-4">
@@ -422,9 +449,12 @@ export const AdminOrdersTable: React.FC = () => {
         </div>
         {/* Pagination */}
         {totalPages > 1 && (
-          <div style={{marginBottom:"4rem"}} className="mt-6 flex justify-center">
+          <div style={{marginBottom:"4rem"}} className="mt-6 overflow-x-hidden">
+            <div className="mb-3 text-center text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </div>
             <Pagination>
-              <PaginationContent>
+              <PaginationContent className="flex-wrap justify-center">
                 <PaginationItem>
                   <PaginationPrevious
                     onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
@@ -432,16 +462,22 @@ export const AdminOrdersTable: React.FC = () => {
                   />
                 </PaginationItem>
                
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      onClick={() => handlePageChange(page)}
-                      isActive={currentPage === page}
-                      className="cursor-pointer"
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
+                {visiblePages.map((page, index) => (
+                  typeof page === 'number' ? (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        onClick={() => handlePageChange(page)}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={`${page}-${index}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  )
                 ))}
                
                 <PaginationItem>

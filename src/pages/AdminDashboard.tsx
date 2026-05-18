@@ -8,6 +8,7 @@ import { MobileNavigation } from "@/components/common/MobileNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { PWAInstallPrompt } from "@/components/common/PWAInstallPrompt";
 import { toast } from "sonner";
+import { isEstimatedOrder } from "@/lib/orderMetrics";
 
 export const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -54,6 +55,7 @@ export const AdminDashboard: React.FC = () => {
     const num = parseInt(order.number);
     return !isNaN(num) && num > 999999;
   });
+  const paymentTrackedOrders = orders.filter(order => !isEstimatedOrder(order));
 
   const stats = {
     total: orders.length,
@@ -61,8 +63,8 @@ export const AdminDashboard: React.FC = () => {
     running: orders.filter(o => o.status === 'Running').length,
     done: orders.filter(o => o.status === 'Done').length,
     delivered: orders.filter(o => o.status === 'Delivered').length,
-    paid: orders.filter(o => o.paymentStatus === 'Paid').length,
-    unpaid: orders.filter(o => o.paymentStatus === 'Unpaid').length,
+    paid: paymentTrackedOrders.filter(o => o.paymentStatus === 'Paid').length,
+    unpaid: paymentTrackedOrders.filter(o => o.paymentStatus === 'Unpaid').length,
     inquiry: orders.filter(o => o.type === 'Inquiry').length,
     confirm: orders.filter(o => o.type === 'Confirm').length,
   };

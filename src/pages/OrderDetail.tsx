@@ -10,6 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { ImageModal } from "@/components/common/ImageModal";
 import { getFileType, getFileIcon, getFileName } from "@/lib/fileUtils";
+import { formatMetricNumber, isEstimatedOrder } from "@/lib/orderMetrics";
 
 export const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -19,6 +20,7 @@ export const OrderDetail: React.FC = () => {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
+  const formatWeight = (value: number) => formatMetricNumber(value);
 
   useEffect(() => {
     if (id) {
@@ -143,6 +145,8 @@ export const OrderDetail: React.FC = () => {
     );
   }
 
+  const estimatedMode = isEstimatedOrder(order);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -207,10 +211,23 @@ export const OrderDetail: React.FC = () => {
                 <span className="text-sm text-foreground">{new Date(order.deliveryDate).toLocaleDateString()}</span>
               </div>
               
-              <div className="flex justify-between py-2 border-b border-border">
-                <span className="text-sm text-muted-foreground">Payment Status</span>
-                <StatusBadge status={order.paymentStatus} type="payment" />
-              </div>
+              {estimatedMode ? (
+                <>
+                  <div className="flex justify-between py-2 border-b border-border">
+                    <span className="text-sm text-muted-foreground">Estimated Amount</span>
+                    <span className="text-sm text-foreground font-medium">â‚¹{(order.estimatedAmount || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b border-border">
+                    <span className="text-sm text-muted-foreground">Estimated Weight</span>
+                    <span className="text-sm text-foreground font-medium">{formatWeight(order.estimatedWeight || 0)}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between py-2 border-b border-border">
+                  <span className="text-sm text-muted-foreground">Payment Status</span>
+                  <StatusBadge status={order.paymentStatus} type="payment" />
+                </div>
+              )}
               
               {order.imageUrls && order.imageUrls.length > 0 && (
                 <div className="py-2 space-y-3">

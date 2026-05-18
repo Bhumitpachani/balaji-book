@@ -44,6 +44,9 @@ export interface Order {
   paymentStatus: 'Paid' | 'Unpaid';
   totalAmount: number;
   receivedPayment: number;
+  analysisMode?: 'legacy-payment' | 'estimate';
+  estimatedAmount?: number;
+  estimatedWeight?: number;
   clientId: string;
   clientName?: string;
   clientMobileNumber?: string;
@@ -71,9 +74,12 @@ export interface CreateOrderData {
   addDate: string;
   deliveryDate: string;
   type: string;
-  paymentStatus: string;
-  totalAmount: number;
-  receivedPayment: number;
+  paymentStatus?: string;
+  totalAmount?: number;
+  receivedPayment?: number;
+  analysisMode?: 'legacy-payment' | 'estimate';
+  estimatedAmount?: number;
+  estimatedWeight?: number;
   clientId: string;
   clientName: string;
   clientMobileNumber: string;
@@ -197,6 +203,12 @@ class FirebaseService {
     // Get next sequential order number
     const nextOrderNumber = await this.getNextOrderNumber();
 
+    const analysisMode = data.analysisMode || 'estimate';
+    const totalAmount = data.totalAmount ?? 0;
+    const receivedPayment = data.receivedPayment ?? 0;
+    const paymentStatus = data.paymentStatus ||
+      (analysisMode === 'estimate' || receivedPayment >= totalAmount ? 'Paid' : 'Unpaid');
+
     const orderData = {
       orderName: data.orderName,
       number: nextOrderNumber.nextNumber.toString(),
@@ -205,9 +217,12 @@ class FirebaseService {
       addDate: data.addDate,
       deliveryDate: data.deliveryDate,
       type: data.type,
-      paymentStatus: data.paymentStatus,
-      totalAmount: data.totalAmount,
-      receivedPayment: data.receivedPayment,
+      paymentStatus,
+      totalAmount,
+      receivedPayment,
+      analysisMode,
+      estimatedAmount: data.estimatedAmount ?? 0,
+      estimatedWeight: data.estimatedWeight ?? 0,
       clientId: data.clientId,
       clientName: data.clientName,
       clientMobileNumber: data.clientMobileNumber,

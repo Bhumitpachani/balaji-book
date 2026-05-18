@@ -16,6 +16,7 @@ import { firebaseService, Order, Client } from "@/lib/firebaseService";
 import { MobileNavigation } from "@/components/common/MobileNavigation";
 import { getCitiesForState } from "@/lib/indiaLocations";
 import { INDUSTRY_FIELDS } from "@/lib/industryFields";
+import { formatMetricNumber, isEstimatedOrder } from "@/lib/orderMetrics";
 import { cn } from "@/lib/utils";
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--muted))', 'hsl(var(--destructive))'];
@@ -295,6 +296,94 @@ export const Analytics: React.FC = () => {
     });
   }, [orders, clientLookup, filters]);
 
+  const analysisOrders = React.useMemo(
+    () => filteredOrders.filter(order => isEstimatedOrder(order)),
+    [filteredOrders]
+  );
+
+  const estimateMonthlySeries = React.useMemo(() => {
+    const months: Record<string, { estimatedAmount: number; estimatedWeight: number }> = {};
+
+    analysisOrders.forEach(order => {
+      const date = parseDate(order.addDate) || parseDate(order.createdAt as Date);
+      if (!date) return;
+
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (!months[monthKey]) {
+        months[monthKey] = { estimatedAmount: 0, estimatedWeight: 0 };
+      }
+
+      months[monthKey].estimatedAmount += order.estimatedAmount || 0;
+      months[monthKey].estimatedWeight += order.estimatedWeight || 0;
+    });
+
+    return Object.entries(months)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, data]) => ({
+        month: new Date(`${month}-01`).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        estimatedAmount: data.estimatedAmount,
+        estimatedWeight: data.estimatedWeight
+      }))
+      .slice(-6);
+  }, [analysisOrders]);
+
+  const estimateSummary = React.useMemo(() => {
+    let totalEstimatedAmount = 0;
+    let totalEstimatedWeight = 0;
+
+    analysisOrders.forEach(order => {
+      totalEstimatedAmount += order.estimatedAmount || 0;
+      totalEstimatedWeight += order.estimatedWeight || 0;
+    });
+
+    return {
+      analysisReadyOrders: analysisOrders.length,
+      legacyOrders: Math.max(filteredOrders.length - analysisOrders.length, 0),
+      totalEstimatedAmount,
+      totalEstimatedWeight,
+      avgEstimatedAmount: analysisOrders.length ? totalEstimatedAmount / analysisOrders.length : 0,
+      coverageRate: filteredOrders.length ? (analysisOrders.length / filteredOrders.length) * 100 : 0
+    };
+  }, [analysisOrders, filteredOrders.length]);
+
+  const estimateRollingMetrics = React.useMemo(() => {
+    const today = startOfDay(new Date());
+    const currentStart = new Date(today);
+    currentStart.setDate(currentStart.getDate() - 29);
+
+    const previousEnd = new Date(currentStart);
+    previousEnd.setDate(previousEnd.getDate() - 1);
+
+    const previousStart = new Date(previousEnd);
+    previousStart.setDate(previousStart.getDate() - 29);
+
+    const result = {
+      amountCurrent: 0,
+      amountPrevious: 0,
+      weightCurrent: 0,
+      weightPrevious: 0,
+    };
+
+    analysisOrders.forEach(order => {
+      const parsed = parseDate(order.addDate) || parseDate(order.createdAt as Date);
+      if (!parsed) return;
+
+      const orderDate = startOfDay(parsed);
+      const amount = order.estimatedAmount || 0;
+      const weight = order.estimatedWeight || 0;
+
+      if (orderDate >= currentStart && orderDate <= today) {
+        result.amountCurrent += amount;
+        result.weightCurrent += weight;
+      } else if (orderDate >= previousStart && orderDate <= previousEnd) {
+        result.amountPrevious += amount;
+        result.weightPrevious += weight;
+      }
+    });
+
+    return result;
+  }, [analysisOrders]);
+
   const monthlySeries = React.useMemo(() => {
     const months: Record<string, { orders: number; revenue: number; received: number }> = {};
 
@@ -363,10 +452,10 @@ export const Analytics: React.FC = () => {
     { name: 'Delivered', value: filteredOrders.filter(o => o.status === 'Delivered').length },
   ].filter(item => item.value > 0)), [filteredOrders]);
 
-  const paymentData = React.useMemo(() => ([
-    { name: 'Paid', value: filteredOrders.filter(o => o.paymentStatus === 'Paid').length },
-    { name: 'Unpaid', value: filteredOrders.filter(o => o.paymentStatus === 'Unpaid').length },
-  ].filter(item => item.value > 0)), [filteredOrders]);
+  const analysisCoverageData = React.useMemo(() => ([
+    { name: 'Estimate Ready', value: estimateSummary.analysisReadyOrders },
+    { name: 'Legacy Orders', value: estimateSummary.legacyOrders },
+  ].filter(item => item.value > 0)), [estimateSummary]);
 
   const paymentAmountData = React.useMemo(() => ([
     { name: 'Received', value: summary.totalReceived },
@@ -751,8 +840,8 @@ export const Analytics: React.FC = () => {
                 <div className="space-y-2">
                   <h2 className="text-3xl font-semibold tracking-tight text-foreground">Business performance at a glance</h2>
                   <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                    Track order flow, collection health, client retention, and segment performance from one place.
-                    Every metric below respects the same client filters used on the Clients page.
+                    Track order flow, estimate analysis, client retention, and segment performance from one place.
+                    New estimate metrics stay separate from legacy payment records so historical production data remains safe.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -768,14 +857,14 @@ export const Analytics: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:min-w-[520px]">
                 <div className="rounded-2xl border border-border/60 bg-background/70 p-4 backdrop-blur">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Revenue</p>
-                  <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(summary.totalValue)}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{formatDeltaLabel(rollingMetrics.revenueCurrent, rollingMetrics.revenuePrevious)}</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Estimated Amount</p>
+                  <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(estimateSummary.totalEstimatedAmount)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{formatDeltaLabel(estimateRollingMetrics.amountCurrent, estimateRollingMetrics.amountPrevious)}</p>
                 </div>
                 <div className="rounded-2xl border border-border/60 bg-background/70 p-4 backdrop-blur">
-                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Collections</p>
-                  <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(summary.totalReceived)}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{formatDeltaLabel(rollingMetrics.collectionsCurrent, rollingMetrics.collectionsPrevious)}</p>
+                  <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Estimated Weight</p>
+                  <p className="mt-2 text-xl font-semibold text-foreground">{formatMetricNumber(estimateSummary.totalEstimatedWeight)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{formatDeltaLabel(estimateRollingMetrics.weightCurrent, estimateRollingMetrics.weightPrevious)}</p>
                 </div>
                 <div className="rounded-2xl border border-border/60 bg-background/70 p-4 backdrop-blur">
                   <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Orders</p>
@@ -867,6 +956,9 @@ export const Analytics: React.FC = () => {
             <p className="text-sm text-muted-foreground">
               Showing {filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''} across {clientInsights.totalClients} client{clientInsights.totalClients !== 1 ? 's' : ''}.
             </p>
+            <p className="text-xs text-muted-foreground">
+              Estimate analysis is currently available for {estimateSummary.analysisReadyOrders} order{estimateSummary.analysisReadyOrders !== 1 ? 's' : ''}; legacy orders stay separate to protect older payment data.
+            </p>
           </CardContent>
         </Card>
 
@@ -885,7 +977,7 @@ export const Analytics: React.FC = () => {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <CardTitle className="text-xl">Executive Summary</CardTitle>
-                      <CardDescription>Financial performance, delivery strength, and commercial momentum.</CardDescription>
+                      <CardDescription>Estimate-ready performance, delivery strength, and commercial momentum.</CardDescription>
                     </div>
                     <Badge variant="secondary" className="w-fit">
                       {formatPercent(overviewMetrics.confirmRate)} confirm share
@@ -895,19 +987,19 @@ export const Analytics: React.FC = () => {
                 <CardContent className="space-y-6">
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-                      <p className="text-sm text-muted-foreground">Total Value</p>
-                      <p className="mt-2 text-3xl font-semibold text-foreground">{formatCurrency(summary.totalValue)}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">{formatDeltaLabel(rollingMetrics.revenueCurrent, rollingMetrics.revenuePrevious)}</p>
+                      <p className="text-sm text-muted-foreground">Estimated Amount</p>
+                      <p className="mt-2 text-3xl font-semibold text-foreground">{formatCurrency(estimateSummary.totalEstimatedAmount)}</p>
+                      <p className="mt-2 text-xs text-muted-foreground">{formatDeltaLabel(estimateRollingMetrics.amountCurrent, estimateRollingMetrics.amountPrevious)}</p>
                     </div>
                     <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-                      <p className="text-sm text-muted-foreground">Collected</p>
-                      <p className="mt-2 text-3xl font-semibold text-foreground">{formatCurrency(summary.totalReceived)}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">{formatDeltaLabel(rollingMetrics.collectionsCurrent, rollingMetrics.collectionsPrevious)}</p>
+                      <p className="text-sm text-muted-foreground">Estimated Weight</p>
+                      <p className="mt-2 text-3xl font-semibold text-foreground">{formatMetricNumber(estimateSummary.totalEstimatedWeight)}</p>
+                      <p className="mt-2 text-xs text-muted-foreground">{formatDeltaLabel(estimateRollingMetrics.weightCurrent, estimateRollingMetrics.weightPrevious)}</p>
                     </div>
                     <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
-                      <p className="text-sm text-muted-foreground">Outstanding</p>
-                      <p className="mt-2 text-3xl font-semibold text-destructive">{formatCurrency(summary.outstanding)}</p>
-                      <p className="mt-2 text-xs text-muted-foreground">{formatPercent(summary.totalValue ? (summary.outstanding / summary.totalValue) * 100 : 0)} of order value still open</p>
+                      <p className="text-sm text-muted-foreground">Analysis-Ready Orders</p>
+                      <p className="mt-2 text-3xl font-semibold text-foreground">{estimateSummary.analysisReadyOrders}</p>
+                      <p className="mt-2 text-xs text-muted-foreground">{formatPercent(estimateSummary.coverageRate)} of filtered orders have the new estimate fields</p>
                     </div>
                   </div>
 
@@ -915,15 +1007,15 @@ export const Analytics: React.FC = () => {
                     <div className="rounded-2xl border border-border/60 bg-background/70 p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <p className="text-sm font-medium text-foreground">Collection health</p>
-                          <p className="text-xs text-muted-foreground">Received share of billed amount</p>
+                          <p className="text-sm font-medium text-foreground">Estimate coverage</p>
+                          <p className="text-xs text-muted-foreground">Orders already moved to the new analysis structure</p>
                         </div>
-                        <Badge variant="outline">{formatPercent(summary.collectionRate)}</Badge>
+                        <Badge variant="outline">{formatPercent(estimateSummary.coverageRate)}</Badge>
                       </div>
-                      <Progress value={summary.collectionRate} className="mt-4 h-2.5" />
+                      <Progress value={estimateSummary.coverageRate} className="mt-4 h-2.5" />
                       <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{formatCurrency(summary.totalReceived)} collected</span>
-                        <span>{formatCurrency(summary.outstanding)} pending</span>
+                        <span>{estimateSummary.analysisReadyOrders} estimate-ready</span>
+                        <span>{estimateSummary.legacyOrders} legacy orders</span>
                       </div>
                     </div>
 
@@ -949,16 +1041,16 @@ export const Analytics: React.FC = () => {
                       <p className="mt-2 text-xl font-semibold text-foreground">{rollingMetrics.ordersCurrent}</p>
                     </div>
                     <div className="rounded-xl bg-success/10 p-3">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Collections 30d</p>
-                      <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(rollingMetrics.collectionsCurrent)}</p>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Est. Weight 30d</p>
+                      <p className="mt-2 text-xl font-semibold text-foreground">{formatMetricNumber(estimateRollingMetrics.weightCurrent)}</p>
                     </div>
                     <div className="rounded-xl bg-accent/10 p-3">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Avg order</p>
-                      <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(summary.avgOrderValue)}</p>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Avg Est. Amount</p>
+                      <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(estimateSummary.avgEstimatedAmount)}</p>
                     </div>
                     <div className="rounded-xl bg-muted/70 p-3">
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Revenue per client</p>
-                      <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(overviewMetrics.avgRevenuePerClient)}</p>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Analysis Coverage</p>
+                      <p className="mt-2 text-xl font-semibold text-foreground">{formatPercent(estimateSummary.coverageRate)}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -976,13 +1068,13 @@ export const Analytics: React.FC = () => {
                   badge={`${openOrders.length} open`}
                 />
                 <MetricCard
-                  title="Collection Strength"
-                  value={formatPercent(overviewMetrics.paidRate)}
-                  subtitle={`${overviewMetrics.unpaidOrders} unpaid order${overviewMetrics.unpaidOrders !== 1 ? 's' : ''} in scope`}
+                  title="Analysis Coverage"
+                  value={formatPercent(estimateSummary.coverageRate)}
+                  subtitle={`${estimateSummary.analysisReadyOrders} order${estimateSummary.analysisReadyOrders !== 1 ? 's' : ''} ready for estimate analytics`}
                   icon={<Wallet className="h-5 w-5 text-success" />}
                   toneClass="bg-success/10"
-                  progress={summary.collectionRate}
-                  progressLabel={`${formatCurrency(summary.totalReceived)} received from ${formatCurrency(summary.totalValue)} billed`}
+                  progress={estimateSummary.coverageRate}
+                  progressLabel={`${estimateSummary.legacyOrders} legacy order${estimateSummary.legacyOrders !== 1 ? 's' : ''} still using the old payment fields`}
                 />
                 <MetricCard
                   title="Client Retention"
@@ -1029,22 +1121,29 @@ export const Analytics: React.FC = () => {
                 </Card>
               )}
 
-              {monthlySeries.length > 0 && (
+              {estimateMonthlySeries.length > 0 && (
                 <Card className="border-border/60 bg-card/95 shadow-card">
                   <CardHeader>
-                    <CardTitle className="text-lg">Revenue and Collections</CardTitle>
-                    <CardDescription>Billing and receipts across the same six-month window.</CardDescription>
+                    <CardTitle className="text-lg">Estimated Amount and Weight</CardTitle>
+                    <CardDescription>New estimate metrics captured from updated orders over the last six months.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={monthlySeries}>
+                        <LineChart data={estimateMonthlySeries}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="month" />
-                          <YAxis />
-                          <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                          <Line type="monotone" dataKey="revenue" stroke="hsl(var(--accent))" strokeWidth={3} dot={{ fill: 'hsl(var(--accent))' }} />
-                          <Line type="monotone" dataKey="received" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))' }} />
+                          <YAxis yAxisId="amount" />
+                          <YAxis yAxisId="weight" orientation="right" />
+                          <Tooltip
+                            formatter={(value, name) =>
+                              name === 'Estimated Amount'
+                                ? formatCurrency(Number(value))
+                                : formatMetricNumber(Number(value))
+                            }
+                          />
+                          <Line yAxisId="amount" type="monotone" dataKey="estimatedAmount" name="Estimated Amount" stroke="hsl(var(--accent))" strokeWidth={3} dot={{ fill: 'hsl(var(--accent))' }} />
+                          <Line yAxisId="weight" type="monotone" dataKey="estimatedWeight" name="Estimated Weight" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))' }} />
                         </LineChart>
                       </ResponsiveContainer>
                     </div>
@@ -1085,16 +1184,16 @@ export const Analytics: React.FC = () => {
                 </Card>
               )}
 
-              {paymentData.length > 0 && (
+              {analysisCoverageData.length > 0 && (
                 <Card className="border-border/60 bg-card/95 shadow-card">
                   <CardHeader>
-                    <CardTitle className="text-lg">Payment Status</CardTitle>
-                    <CardDescription>Paid versus unpaid orders.</CardDescription>
+                    <CardTitle className="text-lg">Estimate Coverage</CardTitle>
+                    <CardDescription>How much of the filtered order history is ready for the new analytics model.</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={paymentData}>
+                        <BarChart data={analysisCoverageData}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="name" />
                           <YAxis allowDecimals={false} />

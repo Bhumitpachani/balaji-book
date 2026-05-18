@@ -25,6 +25,9 @@ export interface Order {
   paymentStatus: 'Paid' | 'Unpaid';
   totalAmount: number;
   receivedPayment: number;
+  analysisMode?: 'legacy-payment' | 'estimate';
+  estimatedAmount?: number;
+  estimatedWeight?: number;
   clientId: string | Client;
   clientName?: string;
   clientMobileNumber?: string;
@@ -54,9 +57,12 @@ export interface CreateOrderData {
   addDate: string;
   deliveryDate: string;
   type: string;
-  paymentStatus: string;
-  totalAmount: number;
-  receivedPayment: number;
+  paymentStatus?: string;
+  totalAmount?: number;
+  receivedPayment?: number;
+  analysisMode?: 'legacy-payment' | 'estimate';
+  estimatedAmount?: number;
+  estimatedWeight?: number;
   clientId: string;
   clientName: string;
   clientMobileNumber: string;
