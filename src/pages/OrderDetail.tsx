@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ImageModal } from "@/components/common/ImageModal";
 import { getFileType, getFileIcon, getFileName } from "@/lib/fileUtils";
 import { formatMetricNumber, isEstimatedOrder } from "@/lib/orderMetrics";
+import { getNextOrderStatus, isPendingInquiry } from "@/lib/orderWorkflow";
 
 export const OrderDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,12 +45,12 @@ export const OrderDetail: React.FC = () => {
     }
   };
 
-  const handleStatusUpdate = async (newStatus: string) => {
+  const handleStatusUpdate = async (newStatus: Order["status"]) => {
     if (!order) return;
-    
+
     try {
       await firebaseService.updateOrder(order.id, { status: newStatus });
-      setOrder({ ...order, status: newStatus as any });
+      setOrder({ ...order, status: newStatus });
       toast({
         title: "Success",
         description: "Order status updated successfully",
@@ -65,7 +66,7 @@ export const OrderDetail: React.FC = () => {
 
   const handlePaymentUpdate = async (newPaymentStatus: string) => {
     if (!order) return;
-    
+
     try {
       await firebaseService.updateOrder(order.id, { paymentStatus: newPaymentStatus });
       setOrder({ ...order, paymentStatus: newPaymentStatus as any });
@@ -82,35 +83,24 @@ export const OrderDetail: React.FC = () => {
     }
   };
 
-  const getNextStatus = (currentStatus: string, orderType: string) => {
-    if (orderType === 'Inquiry') {
-      return currentStatus === 'Pending' ? 'Confirm Order' : null;
-    }
-    
-    if (currentStatus === 'Pending') return 'Running';
-    if (currentStatus === 'Running') return 'Done';
-    if (currentStatus === 'Done') return 'Delivered';
-    return null;
-  };
-
-  const handleStatusButtonClick = (currentStatus: string, orderType: string) => {
-    if (orderType === 'Inquiry' && currentStatus === 'Pending') {
+  const handleStatusButtonClick = (currentStatus: Order["status"], orderType: Order["type"]) => {
+    if (isPendingInquiry({ status: currentStatus, type: orderType })) {
       // Convert inquiry to confirm order
       handleOrderTypeUpdate('Confirm');
     } else {
-      const nextStatus = getNextStatus(currentStatus, orderType);
+      const nextStatus = getNextOrderStatus(currentStatus, orderType);
       if (nextStatus) {
         handleStatusUpdate(nextStatus);
       }
     }
   };
 
-  const handleOrderTypeUpdate = async (newType: string) => {
+  const handleOrderTypeUpdate = async (newType: Order["type"]) => {
     if (!order) return;
-    
+
     try {
       await firebaseService.updateOrder(order.id, { type: newType });
-      setOrder({ ...order, type: newType as any });
+      setOrder({ ...order, type: newType });
       toast({
         title: "Success",
         description: "Order type updated successfully",
@@ -200,26 +190,26 @@ export const OrderDetail: React.FC = () => {
                 <span className="text-sm text-muted-foreground">Work Description</span>
                 <span className="text-sm text-foreground font-medium text-right">{order.work}</span>
               </div>
-              
+
               <div className="flex justify-between py-2 border-b border-border">
                 <span className="text-sm text-muted-foreground">Added Date</span>
                 <span className="text-sm text-foreground">{new Date(order.addDate).toLocaleDateString()}</span>
               </div>
-              
+
               <div className="flex justify-between py-2 border-b border-border">
                 <span className="text-sm text-muted-foreground">Delivery Date</span>
                 <span className="text-sm text-foreground">{new Date(order.deliveryDate).toLocaleDateString()}</span>
               </div>
-              
+
               {estimatedMode ? (
                 <>
                   <div className="flex justify-between py-2 border-b border-border">
                     <span className="text-sm text-muted-foreground">Estimated Amount</span>
-                    <span className="text-sm text-foreground font-medium">â‚¹{(order.estimatedAmount || 0).toLocaleString('en-IN')}</span>
+                    <span className="text-sm text-foreground font-medium">₹{(order.estimatedAmount || 0).toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between py-2 border-b border-border">
                     <span className="text-sm text-muted-foreground">Estimated Weight</span>
-                    <span className="text-sm text-foreground font-medium">{formatWeight(order.estimatedWeight || 0)}</span>
+                    <span className="text-sm text-foreground font-medium">{formatWeight(order.estimatedWeight || 0)} Kg</span>
                   </div>
                 </>
               ) : (
@@ -228,7 +218,7 @@ export const OrderDetail: React.FC = () => {
                   <StatusBadge status={order.paymentStatus} type="payment" />
                 </div>
               )}
-              
+
               {order.imageUrls && order.imageUrls.length > 0 && (
                 <div className="py-2 space-y-3">
                   {/* Images Section */}
@@ -240,9 +230,9 @@ export const OrderDetail: React.FC = () => {
                           .map((url, originalIndex) => ({ url, originalIndex }))
                           .filter(({ url }) => getFileType(url) === 'image')
                           .map(({ url, originalIndex }) => (
-                            <img 
+                            <img
                               key={originalIndex}
-                              src={url} 
+                              src={url}
                               alt={`Order ${originalIndex + 1}`}
                               className="w-full h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity"
                               onClick={() => setSelectedImageIndex(originalIndex)}
@@ -263,7 +253,7 @@ export const OrderDetail: React.FC = () => {
                             const fileType = getFileType(url);
                             const Icon = getFileIcon(fileType);
                             const fileName = getFileName(url);
-                            
+
                             return (
                               <a
                                 key={index}
@@ -292,11 +282,11 @@ export const OrderDetail: React.FC = () => {
           <CardContent className="p-4">
             <div className="space-y-3">
               <h3 className="font-semibold text-foreground">Quick Actions</h3>
-              
+
               <div className="flex flex-col gap-2">
                 {/* Status Update Button */}
                 {(() => {
-                  if (order.type === 'Inquiry' && order.status === 'Pending') {
+                  if (isPendingInquiry(order)) {
                     return (
                       <Button
                         onClick={() => handleStatusButtonClick(order.status, order.type)}
@@ -306,8 +296,8 @@ export const OrderDetail: React.FC = () => {
                       </Button>
                     );
                   }
-                  
-                  const nextStatus = getNextStatus(order.status, order.type);
+
+                  const nextStatus = getNextOrderStatus(order.status, order.type);
                   return nextStatus && (
                     <Button
                       onClick={() => handleStatusUpdate(nextStatus)}
@@ -319,7 +309,7 @@ export const OrderDetail: React.FC = () => {
                 })()}
 
                 {/* Admin Payment Actions */}
-{/*                 {user?.role === 'admin' && order.paymentStatus === 'Unpaid' && (
+                {/*                 {user?.role === 'admin' && order.paymentStatus === 'Unpaid' && (
                   <Button
                     variant="outline"
                     onClick={() => handlePaymentUpdate('Paid')}
@@ -343,9 +333,9 @@ export const OrderDetail: React.FC = () => {
             .filter(({ url }) => getFileType(url) === 'image');
           return originalIndices[idx]?.originalIdx === selectedImageIndex;
         });
-        
+
         if (currentImageIndex === -1 || imageUrls.length === 0) return null;
-        
+
         return (
           <ImageModal
             isOpen={true}

@@ -13,6 +13,7 @@ import { MobileNavigation } from "@/components/common/MobileNavigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { formatMetricNumber, isEstimatedOrder } from "@/lib/orderMetrics";
+import { getNextOrderStatus, isPendingInquiry } from "@/lib/orderWorkflow";
 
 export const OrdersList: React.FC = () => {
   const { user } = useAuth();
@@ -94,12 +95,12 @@ export const OrdersList: React.FC = () => {
 
   const handleStatusButtonClick = async (order: Order) => {
     try {
-      if (order.type === 'Inquiry' && order.status === 'Pending') {
+      if (isPendingInquiry(order)) {
         await firebaseService.updateOrder(order.id, { type: 'Confirm' });
         setOrders(prev => prev.map(o => o.id === order.id ? { ...o, type: 'Confirm' } : o));
         toast({ title: "Success", description: "Inquiry converted to confirmed order" });
       } else {
-        const nextStatus = getNextStatus(order.status, order.type);
+        const nextStatus = getNextOrderStatus(order.status, order.type);
         if (nextStatus) {
           await firebaseService.updateOrder(order.id, { status: nextStatus });
           setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: nextStatus } : o));
@@ -109,14 +110,6 @@ export const OrdersList: React.FC = () => {
     } catch (error: any) {
       toast({ title: "Error", description: error?.message || "Failed to update", variant: "destructive" });
     }
-  };
-
-  const getNextStatus = (currentStatus: string, orderType: string) => {
-    if (orderType === 'Inquiry') return currentStatus === 'Pending' ? 'Confirm Order' : null;
-    if (currentStatus === 'Pending') return 'Running';
-    if (currentStatus === 'Running') return 'Done';
-    if (currentStatus === 'Done') return 'Delivered';
-    return null;
   };
 
   const handlePaymentCollected = async (newReceivedAmount: number) => {
@@ -288,11 +281,10 @@ export const OrdersList: React.FC = () => {
               return (
                 <Card
                   key={order.id}
-                  className={`shadow-card hover:shadow-lg transition-all duration-300 ${
-                    overdue
-                      ? 'border-2 border-destructive shadow-lg shadow-destructive/20 animate-pulse-slow'
-                      : 'border-border'
-                  }`}
+                  className={`shadow-card hover:shadow-lg transition-all duration-300 ${overdue
+                    ? 'border-2 border-destructive shadow-lg shadow-destructive/20 animate-pulse-slow'
+                    : 'border-border'
+                    }`}
                 >
                   <CardContent className="p-4">
                     <div className="space-y-4">
@@ -359,37 +351,37 @@ export const OrdersList: React.FC = () => {
                           <div className="grid grid-cols-2 gap-4">
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">Estimated Amount</p>
-                              <p className="text-lg font-bold">â‚¹{(order.estimatedAmount || 0).toLocaleString('en-IN')}</p>
+                              <p className="text-lg font-bold">₹{(order.estimatedAmount || 0).toLocaleString('en-IN')}</p>
                             </div>
                             <div>
                               <p className="text-xs text-muted-foreground mb-1">Estimated Weight</p>
-                              <p className="text-lg font-bold text-success">{formatWeight(order.estimatedWeight || 0)}</p>
+                              <p className="text-lg font-bold text-success">{formatWeight(order.estimatedWeight || 0)} Kg</p>
                             </div>
                           </div>
                         </div>
                       ) : (
                         <div className="bg-gradient-to-r from-primary/5 to-accent/5 p-4 rounded-lg border border-primary/20">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Total</p>
-                            <p className="text-lg font-bold">₹{order.totalAmount.toLocaleString('en-IN')}</p>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Total</p>
+                              <p className="text-lg font-bold">₹{order.totalAmount.toLocaleString('en-IN')}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-1">Received</p>
+                              <p className="text-lg font-bold text-success">₹{order.receivedPayment.toLocaleString('en-IN')}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground mb-1">Received</p>
-                            <p className="text-lg font-bold text-success">₹{order.receivedPayment.toLocaleString('en-IN')}</p>
+                          {order.totalAmount > order.receivedPayment && (
+                            <div className="mt-2 pt-2 border-t border-primary/20">
+                              <p className="text-sm font-semibold text-destructive">
+                                ₹{(order.totalAmount - order.receivedPayment).toLocaleString('en-IN')} pending
+                              </p>
+                            </div>
+                          )}
+                          <div className="mt-3 flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Payment:</span>
+                            <StatusBadge status={order.paymentStatus} type="payment" />
                           </div>
-                        </div>
-                        {order.totalAmount > order.receivedPayment && (
-                          <div className="mt-2 pt-2 border-t border-primary/20">
-                            <p className="text-sm font-semibold text-destructive">
-                              ₹{(order.totalAmount - order.receivedPayment).toLocaleString('en-IN')} pending
-                            </p>
-                          </div>
-                        )}
-                        <div className="mt-3 flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">Payment:</span>
-                          <StatusBadge status={order.paymentStatus} type="payment" />
-                        </div>
                         </div>
                       )}
 
